@@ -1,0 +1,77 @@
+{
+  "status": "OK",
+  "message": "jobs list",
+  "data": {
+    "total_count": 1,
+    "jobs": [
+      {
+        "id": 55565176435,
+        "run_id": 19423377471,
+        "workflow_name": "Deploy Frontend to Amplify",
+        "head_branch": "main",
+        "run_url": "https://api.github.com/repos/SonJM/deploy-test/actions/runs/19423377471",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOQXJWdM8AAAAM7_FOcw",
+        "head_sha": "2c2c3014ceb425e5410d9487fba32ddd2de51e69",
+        "url": "https://api.github.com/repos/SonJM/deploy-test/actions/jobs/55565176435",
+        "html_url": "https://github.com/SonJM/deploy-test/actions/runs/19423377471/job/55565176435",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2025-11-17T08:38:45Z",
+        "started_at": "2025-11-17T08:38:47Z",
+        "completed_at": "2025-11-17T08:38:52Z",
+        "name": "deploy",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2025-11-17T08:38:48Z",
+            "completed_at": "2025-11-17T08:38:48Z"
+          },
+          {
+            "name": "Checkout code",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2025-11-17T08:38:48Z",
+            "completed_at": "2025-11-17T08:38:49Z"
+          },
+          {
+            "name": "Trigger Amplify Webhook",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2025-11-17T08:38:49Z",
+            "completed_at": "2025-11-17T08:38:50Z"
+          },
+          {
+            "name": "Post Checkout code",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2025-11-17T08:38:50Z",
+            "completed_at": "2025-11-17T08:38:50Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2025-11-17T08:38:50Z",
+            "completed_at": "2025-11-17T08:38:50Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/SonJM/deploy-test/check-runs/55565176435",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "runner_id": 1000000005,
+        "runner_name": "GitHub Actions 1000000005",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      }
+    ]
+  }
+}
