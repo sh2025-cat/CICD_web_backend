@@ -11,7 +11,7 @@ import java.util.Map;
 @RequestMapping("/api/webhook")
 public class WebhookController {
 
-	@PostMapping("/github")
+	@PostMapping("github")
 	public ResponseEntity<Void> handleGithubWebhook(
 			@RequestHeader("X-GitHub-Event") String eventType,
 			@RequestBody Map<String, Object> payload
@@ -26,4 +26,9 @@ public class WebhookController {
 
 		return ResponseEntity.ok().build();
 	}
+
+    @PostMapping("deployments")
+    public void saveDeploymentLog(@RequestBody DeploymentLogRequest request) {
+        deploymentService.save(request);
+    }
 }
