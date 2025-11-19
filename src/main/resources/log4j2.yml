@@ -1,0 +1,68 @@
+Configuration:
+  status: INFO
+
+  # 변수 정의 (Properties)
+  Properties:
+    Property:
+      - name: LOG_PATH
+        value: ./logs
+      - name: LOG_PATTERN_COLOR
+        value: "%d{yyyy-MM-dd HH:mm:ss.SSS} %style{[%thread]}{magenta} %highlight{%-5level} %cyan{%logger{1.}} - %msg%n"
+      - name: LOG_PATTERN_NONCOLOR
+        value: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+  # 로그 출력 방식 정의 (Appends)
+  Appenders:
+    # 콘솔 출력 (Console)
+    Console:
+      name: ConsoleAppender
+      target: SYSTEM_OUT
+      PatternLayout:
+        pattern: ${LOG_PATTERN_COLOR}
+        disableAnsi: false
+
+    # 파일 출력 (RollingFile)
+    RollingFile:
+      name: FileAppender
+      fileName: ${LOG_PATH}/app.log
+      filePattern: "${LOG_PATH}/app-%d{yyyy-MM-dd}-%i.log.gz"
+      PatternLayout:
+        pattern: ${LOG_PATTERN_NONCOLOR}
+      # 로그 파일 정책 설정
+      Policies:
+        # 시간 기반 정책 (interval: 일 단위)
+        TimeBasedTriggeringPolicy:
+          interval: 1
+          modulate: true
+        # 크기 기반 정책
+        SizeBasedTriggeringPolicy:
+          size: 100 MB
+      # 파일 누적 최대 기간 설정
+      DefaultRolloverStrategy:
+        max: 30
+        fileIndex: min
+
+  # 로거 설정 (Loggers)
+  Loggers:
+    # 내 애플리케이션 로그
+    Logger:
+      - name: cat.cicd
+        level: DEBUG
+        additivity: false
+        AppenderRef:
+          - ref: ConsoleAppender
+          - ref: FileAppender
+
+      # Spring 프레임워크 로그
+      - name: org.springframework.web
+        level: INFO
+        additivity: false
+        AppenderRef:
+          - ref: ConsoleAppender
+          - ref: FileAppender
+
+    # 기본 로거 (Root) - 위에서 지정되지 않은 모든 로그
+    Root:
+      level: INFO
+      AppenderRef:
+        - ref: ConsoleAppender

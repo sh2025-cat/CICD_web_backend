@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: demo
+  jpa:
+    show-sql: false
+    generate-ddl: false
+    open-in-view: false
+    hibernate:
+      ddl-auto: create-drop
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    groups-order: desc
+    operations-sorter: method
+    disable-swagger-default-url: true
+    display-request-duration: true
+
+github:
+  access-token: ${GITHUB_TOKEN}
+
+aws:
+  ecr:
+    repository-uri: ${ECR_REPOSITORY_URI}
