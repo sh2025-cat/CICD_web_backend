@@ -1,16 +1,13 @@
 package cat.cicd.service;
 
-import cat.cicd.dto.request.GithubActionStepRequest;
-import cat.cicd.dto.response.WorkflowStepResponse;
+import cat.cicd.dto.response.DeploymentLogResponse;
 import cat.cicd.dto.response.WorkflowInfoResponse;
-import cat.cicd.entity.WorkFlow;
-import cat.cicd.entity.WorkflowJob;
-import cat.cicd.entity.Project;
-import cat.cicd.repository.WorkflowRepository;
-import cat.cicd.repository.WorkflowStepRepository;
-import cat.cicd.repository.ProjectRepository;
+import cat.cicd.entity.Deployment;
+import cat.cicd.entity.DeploymentLog;
+import cat.cicd.repository.DeploymentLogRepository;
+import cat.cicd.repository.DeploymentRepository;
 import com.fasterxml.jackson.databind.JsonNode;
-import lombok.RequiredArgsConstructor;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -25,64 +22,66 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class GithubActionService {
 
-	private final RestClient restClient;
-	private final ProjectRepository projectRepository;
-	private final WorkflowRepository workflowRepository;
-	private final WorkflowStepRepository workflowStepRepository;
-	private final SseService sseService;
 	private final String BASE_URL = "https://api.github.com";
+
 	@Value("${github.access-token}")
 	private String GITHUB_TOKEN;
 
 	private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
+	private final RestClient restClient;
+	private final SseService sseService;
+	private final DeploymentRepository deploymentRepository;
+	private final DeploymentLogRepository deploymentLogRepository;
+
+	public GithubActionService(RestClient restClient, SseService sseService, DeploymentRepository deploymentRepository,
+			DeploymentLogRepository deploymentLogRepository) {
+		this.restClient = restClient;
+		this.sseService = sseService;
+		this.deploymentRepository = deploymentRepository;
+		this.deploymentLogRepository = deploymentLogRepository;
+	}
+
 	@Transactional
-	public void processStepWebhook(GithubActionStepRequest request) {
-		log.info("Processing webhook request: {}", request);
+	public void handleWorkflowJobWebhook(Map<String, Object> payload) {
+		Map<String, Object> job = (Map<String, Object>) payload.get("workflow_job");
+		Long runId = ((Number) job.get("run_id")).longValue();
+		Long jobId = ((Number) job.get("id")).longValue();
+		String jobName = (String) job.get("name");
+		String status = (String) job.get("status");
+		String conclusion = (String) job.get("conclusion");
 
-		Project project = projectRepository.findByName(request.getRepositoryName())
-				.orElseThrow(() -> new IllegalArgumentException("Service not found with name: " + request.getRepositoryName()));
+		Deployment deployment = deploymentRepository.findByRunId(runId)
+				.orElseThrow(() -> new EntityNotFoundException("Deployment not found for runId: " + runId));
 
-		WorkFlow workFlow = workflowRepository.findByGithubRunId(request.getGithubRunId())
-				.orElseGet(() -> {
-					WorkFlow newWorkFlow = new WorkFlow(request.getGithubRunId(), "IN_PROGRESS", project);
-					return workflowRepository.save(newWorkFlow);
-				});
+		DeploymentLog step = deploymentLogRepository.findByDeploymentAndStepName(deployment, jobName)
+				.orElseGet(() -> new DeploymentLog(deployment, jobId, jobName, status));
 
-		String stepIdentifier = request.getJobName() + " / " + request.getStepName();
-		WorkflowJob workflowJob = workflowStepRepository.findByWorkFlowAndName(workFlow, stepIdentifier)
-				.orElseGet(() -> {
-					WorkflowJob newStep = new WorkflowJob(workFlow, stepIdentifier, request.getStatus());
-					return workflowStepRepository.save(newStep);
-				});
-
-		workflowJob.setStatus(request.getStatus());
-		workflowJob.setLog(request.getLog());
-		if (request.getStartedAt() != null) {
-			workflowJob.setStartedAt(LocalDateTime.parse(request.getStartedAt(), DateTimeFormatter.ISO_DATE_TIME));
+		step.setStatus(status);
+		if ("in_progress".equals(status) && step.getStartedAt() == null) {
+			step.setStartedAt(LocalDateTime.now());
 		}
-		if (request.getCompletedAt() != null) {
-			workflowJob.setCompletedAt(LocalDateTime.parse(request.getCompletedAt(), DateTimeFormatter.ISO_DATE_TIME));
+		if ("completed".equals(status)) {
+			step.setCompletedAt(LocalDateTime.now());
 		}
-		workflowStepRepository.save(workflowJob);
+		deploymentLogRepository.save(step);
 
-		if ("SUCCESS".equals(request.getStatus()) || "FAILURE".equals(request.getStatus())) {
-			workFlow.setStatus(request.getStatus());
-			workflowRepository.save(workFlow);
+		if ("failure".equals(conclusion)) {
+			deployment.setStatus(Deployment.DeploymentStatus.FAILED);
 		}
 
+		DeploymentLogResponse stepResponse = DeploymentLogResponse.from(step);
+		// 프론트가 알기 쉬운 형태(예: "stages" 구조)로 매핑해서 보내주면 더 좋습니다.
 
-		sseService.send(project.getName(), "pipeline_step_update", WorkflowStepResponse.from(workflowJob));
+		sseService.send(deployment.getProject().getName(), "deployment_update", stepResponse);
 	}
 
 

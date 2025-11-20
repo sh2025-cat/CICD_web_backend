@@ -9,6 +9,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "tb_deployments")
@@ -16,48 +18,55 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Deployment {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id", nullable = false)
-    private Project project;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "project_id", nullable = false)
+	private Project project;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "artifact_id", nullable = false)
-    private Artifact artifact;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "artifact_id")
+	private Artifact artifact;
 
-    @Setter
+	@Column(nullable = false, unique = true)
+	private Long runId;
+
+	@Setter
+	@Column(name = "task_definition_arn")
+	private String taskDefinitionArn;
+
+	@Column(name = "target_cluster")
+	private String targetCluster;
+
+	@Column(name = "target_service")
+	private String targetService;
+
+	@Setter
 	@Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private DeploymentStatus status;
+	@Column(nullable = false)
+	private DeploymentStatus status;
 
-    @Column(nullable = false)
-    private String taskDefinitionArn;
+	@OneToMany(mappedBy = "deployment", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<DeploymentLog> logs = new ArrayList<>();
 
-    @Setter
-	@OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "previous_deployment_id")
-    private Deployment previousDeployment;
+	@CreationTimestamp
+	private LocalDateTime createdAt;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+	@UpdateTimestamp
+	private LocalDateTime updatedAt;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+	public enum DeploymentStatus {
+		PENDING, IN_PROGRESS, SUCCESS, FAILED, CANCELLED
+	}
 
-    public enum DeploymentStatus {
-        PENDING, IN_PROGRESS, SUCCESS, FAILED, ROLLED_BACK
-    }
-
-    public Deployment(Project project, Artifact artifact, DeploymentStatus status, String taskDefinitionArn) {
-        this.project = project;
-        this.artifact = artifact;
-        this.status = status;
-        this.taskDefinitionArn = taskDefinitionArn;
-    }
-
+	public Deployment(Project project, Long runId) {
+		this.project = project;
+		this.runId = runId;
+		// ★ 여기가 핵심: 생성 시점의 Project 설정을 스냅샷으로 저장
+		this.targetCluster = project.getEcsClusterName();
+		this.targetService = project.getEcsServiceName();
+		this.status = DeploymentStatus.PENDING;
+	}
 }

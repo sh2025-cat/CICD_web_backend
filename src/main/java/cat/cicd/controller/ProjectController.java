@@ -31,12 +31,6 @@ public class ProjectController {
     private final ECSService ecsService;
 
 	@Operation(summary = "새 Repository 추가 API", description = "새로운 프로젝트를 등록하는 API입니다.")
-	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200", description = "생성 성공",
-					content = @Content(schema =  @Schema(implementation = WorkflowInfoResponse.class))),
-			@ApiResponse(responseCode = "404", description = "존재하지 않는 Run ID",
-					content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-	})
 	@PostMapping("/projects")
 	public ResponseEntity<?> createNewProject(@Valid @RequestBody ProjectRequest request) {
 		projectService.createProject(request);

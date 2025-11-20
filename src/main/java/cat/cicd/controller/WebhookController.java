@@ -1,8 +1,6 @@
 package cat.cicd.controller;
 
-import cat.cicd.dto.request.GithubActionStepRequest;
 import cat.cicd.service.GithubActionService;
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,25 +20,13 @@ public class WebhookController {
 
 	@PostMapping("/github")
 	public ResponseEntity<Void> handleGithubWebhook(
-			@RequestHeader("X-GitHub-Event") String eventType,
+			@RequestHeader(value = "X-GitHub-Event", defaultValue = "unknown") String eventType,
 			@RequestBody Map<String, Object> payload
 	) {
-		if("workflow_job".equals(eventType)) {
-			Map<String, Object> job = (Map<String, Object>) payload.get("workflow_job");
-			String status = (String) job.get("status");
-      // conclusion can be null
-			Object conclusion = job.get("conclusion");
-
-			log.info("Job Status Changed: status - {}, conclusion - {}", status, conclusion);
+		if ("workflow_job".equals(eventType)) {
+			githubActionService.handleWorkflowJobWebhook(payload);
 		}
 
-		return ResponseEntity.ok().build();
-	}
-
-	@Operation(summary = "GitHub Actions Step 웹훅 수신", description = "GitHub Actions의 각 Step 진행 상황에 대한 웹훅을 받아 처리합니다.")
-	@PostMapping("/github/step")
-	public ResponseEntity<Void> handleGithubActionStepWebhook(@RequestBody GithubActionStepRequest request) {
-		githubActionService.processStepWebhook(request);
 		return ResponseEntity.ok().build();
 	}
 }

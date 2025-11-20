@@ -97,17 +97,76 @@ aws:
             data: [
                 {
                     "name": "cicd_frontend",
-                    "tag": "v1.1.0 | COMMIT_HASH"
+                    "tag": "v1.1.0 | COMMIT_HASH",
+                    "commit_hash": "COMMIT_HASH",
                     "commit_msg": "커밋 메세지",
                     "deployed_at": "2025-11-20 11:11:11.000"
                 },
                 {
                     "name": "cicd_backend",
-                    "tag": "v1.1.0 | COMMIT_HASH"
+                    "tag": "v1.1.0 | COMMIT_HASH",
+                    "commit_hash": "COMMIT_HASH",
                     "commit_msg": "커밋 메세지",
                     "deployed_at": "2025-11-20 11:11:11.000"
                 }
             ]
+    - 레포지토리 별 배포 리스트 출력
+        -> GitHub Actions에서 ECR 배포가 끝날 떄마다 웹훅을 전송해 배포 결과에 대한 데이터를 DB에 저장한다.
+        -> 프론트엔드에는 특정 레포지토리에서 발생한 배포 내역을 화면에 보여준다
+        -> 레포지토리 배포 리스트 조회 API(/api/repos/{project_id}/deployments)
+            결과 형태
+```json
+{
+  "data": [
+    {
+      "deploymentId": 105,
+      "status": "SUCCESS",
+      "environment": "production",
+      "commit": {
+        "message": "Update production to v1.1.0",
+        "shortHash": "a1b2c3d",
+        "commitUrl": "https://github.com/.../commit/a1b2c3d",
+        "branch": "main",
+        "authorName": "User1",
+        "authorAvatar": "https://avatars.githubusercontent.com/u/..."
+      },
+      "timings": {
+        "startedAt": "2025-11-20T10:00:00",
+        "completedAt": "2025-11-20T10:00:35",
+        "duration": "35s"
+      },
+      "stages": [
+        { "name": "build", "status": "SUCCESS" },
+        { "name": "test", "status": "SUCCESS" },
+        { "name": "deploy", "status": "SUCCESS" }
+      ]
+    },
+    {
+      "deploymentId": 104,
+      "status": "FAILED",
+      "environment": "production",
+      "commit": {
+        "message": "Fix login bug",
+        "shortHash": "f9e8d7c",
+        "commitUrl": "...",
+        "branch": "feature/login",
+        "authorName": "User2",
+        "authorAvatar": "..."
+      },
+      "timings": {
+        "startedAt": "2025-11-20T09:00:00",
+        "completedAt": "2025-11-20T09:00:10",
+        "duration": "10s"
+      },
+      "stages": [
+        { "name": "build", "status": "SUCCESS" },
+        { "name": "test", "status": "FAILED" },
+        { "name": "deploy", "status": "PENDING" }
+      ]
+    }
+  ]
+}
+```
     - 각 Step 별 로그 출력
         - 프론트엔드 에서 JobID를 Request로 받아 GitHub Rest API를 이용해 로그를 SSE로 전달
         - 

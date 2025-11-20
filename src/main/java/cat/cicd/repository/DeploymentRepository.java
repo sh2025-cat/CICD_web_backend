@@ -11,5 +11,5 @@ import java.util.Optional;
 @Repository
 public interface DeploymentRepository extends JpaRepository<Deployment, Long> {
     Optional<Deployment> findFirstByProjectAndStatusOrderByIdDesc(Project project, Deployment.DeploymentStatus status);
-    List<Deployment> findByProjectOrderByIdDesc(Project project);
+	Optional<Deployment> findByRunId(Long runId);
 }
