@@ -3,10 +3,10 @@ spring:
     name: demo
   jpa:
     show-sql: false
-    generate-ddl: false
+    generate-ddl: true
     open-in-view: false
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -30,4 +30,4 @@ github:
 
 aws:
   ecr:
-    repository-uri: ${ECR_REPOSITORY_URI}
+    repository-uri-prefix: ${ECR_REPOSITORY_URI}

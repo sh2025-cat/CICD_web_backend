@@ -11,4 +11,5 @@ public class RestClientConfig {
     public RestClient restClient() {
         return RestClient.create();
     }
+
 }
