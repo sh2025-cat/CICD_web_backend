@@ -1,13 +1,11 @@
 package cat.cicd.service;
 
-import cat.cicd.dto.response.DeploymentLogResponse;
-import cat.cicd.dto.response.WorkflowInfoResponse;
 import cat.cicd.entity.Deployment;
-import cat.cicd.entity.DeploymentLog;
-import cat.cicd.repository.DeploymentLogRepository;
+import cat.cicd.entity.Project;
+import cat.cicd.entity.vo.DeploymentStep;
 import cat.cicd.repository.DeploymentRepository;
+import cat.cicd.repository.ProjectRepository;
 import com.fasterxml.jackson.databind.JsonNode;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -38,50 +36,96 @@ public class GithubActionService {
 	private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
 	private final RestClient restClient;
-	private final SseService sseService;
 	private final DeploymentRepository deploymentRepository;
-	private final DeploymentLogRepository deploymentLogRepository;
+	private final ProjectRepository projectRepository;
+	private final SseService sseService;
 
-	public GithubActionService(RestClient restClient, SseService sseService, DeploymentRepository deploymentRepository,
-			DeploymentLogRepository deploymentLogRepository) {
-		this.restClient = restClient;
-		this.sseService = sseService;
+	public GithubActionService(DeploymentRepository deploymentRepository, ProjectRepository projectRepository, SseService sseService) {
 		this.deploymentRepository = deploymentRepository;
-		this.deploymentLogRepository = deploymentLogRepository;
+		this.projectRepository = projectRepository;
+		this.sseService = sseService;
+		this.restClient = RestClient.create();
 	}
 
 	@Transactional
 	public void handleWorkflowJobWebhook(Map<String, Object> payload) {
 		Map<String, Object> job = (Map<String, Object>) payload.get("workflow_job");
-		Long runId = ((Number) job.get("run_id")).longValue();
+		Map<String, Object> repo = (Map<String, Object>) payload.get("repository");
+
+		if (job == null || repo == null) return;
+
+		String repoName = (String) repo.get("name");
+		String runId = String.valueOf(job.get("run_id"));
 		Long jobId = ((Number) job.get("id")).longValue();
 		String jobName = (String) job.get("name");
 		String status = (String) job.get("status");
 		String conclusion = (String) job.get("conclusion");
 
-		Deployment deployment = deploymentRepository.findByRunId(runId)
-				.orElseThrow(() -> new EntityNotFoundException("Deployment not found for runId: " + runId));
+		Deployment deployment = deploymentRepository.findByGithubRunId(runId)
+				.orElseGet(() -> {
+					Project project = projectRepository.findByName(repoName)
+							.orElseThrow(() -> new RuntimeException("Project not found: " + repoName));
 
-		DeploymentLog step = deploymentLogRepository.findByDeploymentAndStepName(deployment, jobName)
-				.orElseGet(() -> new DeploymentLog(deployment, jobId, jobName, status));
+					return deploymentRepository.save(
+							Deployment.builder()
+									.project(project)
+									.githubRunId(runId)
+									.targetCluster(project.getEcsClusterName())
+									.targetService(project.getEcsServiceName())
+									.build()
+					);
+				});
 
-		step.setStatus(status);
+		DeploymentStep step = deployment.getSteps().stream()
+				.filter(s -> s.getGithubJobId().equals(jobId))
+				.findFirst()
+				.orElseGet(() -> DeploymentStep.builder()
+						.name(jobName)
+						.githubJobId(jobId)
+						.build());
+
+		step.setStatus(conclusion != null ? conclusion.toUpperCase() : status.toUpperCase());
+
 		if ("in_progress".equals(status) && step.getStartedAt() == null) {
 			step.setStartedAt(LocalDateTime.now());
 		}
+
 		if ("completed".equals(status)) {
 			step.setCompletedAt(LocalDateTime.now());
 		}
-		deploymentLogRepository.save(step);
 
-		if ("failure".equals(conclusion)) {
+		deployment.updateStep(step);
+
+		if ("failure".equalsIgnoreCase(conclusion)) {
 			deployment.setStatus(Deployment.DeploymentStatus.FAILED);
+		} else if ("success".equalsIgnoreCase(conclusion) && jobName.toLowerCase().contains("deploy")) {
+			deployment.setStatus(Deployment.DeploymentStatus.SUCCESS);
 		}
 
-		DeploymentLogResponse stepResponse = DeploymentLogResponse.from(step);
-		// 프론트가 알기 쉬운 형태(예: "stages" 구조)로 매핑해서 보내주면 더 좋습니다.
+		deploymentRepository.save(deployment);
 
-		sseService.send(deployment.getProject().getName(), "deployment_update", stepResponse);
+		sseService.send(repoName, "deployment_update", step);
+	}
+
+	@Transactional
+	public void handleWorkflowRunWebhook(Map<String, Object> payload) {
+		String action = (String) payload.get("action");
+
+		if ("completed".equals(action)) {
+			Map<String, Object> run = (Map<String, Object>) payload.get("workflow_run");
+			String runId = String.valueOf(run.get("id"));
+			String conclusion = (String) run.get("conclusion");
+
+			Deployment deployment = deploymentRepository.findByGithubRunId(runId).orElse(null);
+			if (deployment != null) {
+				if ("success".equals(conclusion)) {
+					deployment.setStatus(Deployment.DeploymentStatus.SUCCESS);
+				} else {
+					deployment.setStatus(Deployment.DeploymentStatus.FAILED);
+				}
+				sseService.send(deployment.getProject().getName(), "deployment_complete", deployment);
+			}
+		}
 	}
 
 
@@ -89,7 +133,7 @@ public class GithubActionService {
 	 * Repository 내 모든 파이프라인 실행 리스트를 가져온다.
 	 * @param owner GitHub User / Organization
 	 * @param repo Repository Name
-	 * @return Json 타입의 결과 ({@link WorkflowInfoResponse}로 반환 예정)
+	 * @return Json 타입의 결과
 	 */
 	public JsonNode getPipelinesInRepository(String owner, String repo) {
 		return restClient
@@ -128,17 +172,6 @@ public class GithubActionService {
 				.uri(downloadUrl)
 				.retrieve()
 				.body(String.class);
-	}
-
-	public byte[] getRunLogs(String owner, String repo, long runId) {
-		return restClient
-				.get()
-				.uri(BASE_URL + "/repos/" + owner + "/" + repo + "/actions/runs/" + runId + "/logs")
-				.header("Authorization", "Bearer " + GITHUB_TOKEN)
-				.header("Accept", "application/vnd.github+json")
-				.header("X-GitHub-Api-Version", "2022-11-28")
-				.retrieve()
-				.body(byte[].class);
 	}
 
 	public JsonNode getJobInfo(String owner, String repo, long jobId) {

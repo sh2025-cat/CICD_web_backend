@@ -1,10 +1,9 @@
 package cat.cicd.entity;
 
+import cat.cicd.entity.vo.DeploymentStep;
+import cat.cicd.global.converter.DeploymentStepConverter;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -26,30 +25,33 @@ public class Deployment {
 	@JoinColumn(name = "project_id", nullable = false)
 	private Project project;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "artifact_id")
-	private Artifact artifact;
-
 	@Column(nullable = false, unique = true)
-	private Long runId;
+	private String githubRunId;
 
-	@Setter
-	@Column(name = "task_definition_arn")
-	private String taskDefinitionArn;
+	@Setter @Column private String commitHash;
+	@Setter @Column private String commitMessage;
+	@Setter @Column private String commitAuthor;
+	@Setter @Column private String commitBranch;
+	@Setter @Column private String imageTag;
 
-	@Column(name = "target_cluster")
+	@Column(nullable = false)
 	private String targetCluster;
 
-	@Column(name = "target_service")
+	@Column(nullable = false)
 	private String targetService;
+
+	@Setter @Column
+	private String taskDefinitionArn;
 
 	@Setter
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private DeploymentStatus status;
 
-	@OneToMany(mappedBy = "deployment", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<DeploymentLog> logs = new ArrayList<>();
+	@Setter
+	@Convert(converter = DeploymentStepConverter.class)
+	@Column(columnDefinition = "TEXT")
+	private List<DeploymentStep> steps = new ArrayList<>();
 
 	@CreationTimestamp
 	private LocalDateTime createdAt;
@@ -58,15 +60,20 @@ public class Deployment {
 	private LocalDateTime updatedAt;
 
 	public enum DeploymentStatus {
-		PENDING, IN_PROGRESS, SUCCESS, FAILED, CANCELLED
+		PENDING, IN_PROGRESS, SUCCESS, FAILED, CANCELLED, ROLLED_BACK
 	}
 
-	public Deployment(Project project, Long runId) {
+	@Builder
+	public Deployment(Project project, String githubRunId, String targetCluster, String targetService) {
 		this.project = project;
-		this.runId = runId;
-		// ★ 여기가 핵심: 생성 시점의 Project 설정을 스냅샷으로 저장
-		this.targetCluster = project.getEcsClusterName();
-		this.targetService = project.getEcsServiceName();
+		this.githubRunId = githubRunId;
+		this.targetCluster = targetCluster;
+		this.targetService = targetService;
 		this.status = DeploymentStatus.PENDING;
+	}
+
+	public void updateStep(DeploymentStep newStep) {
+		this.steps.removeIf(step -> step.getName().equals(newStep.getName()));
+		this.steps.add(newStep);
 	}
 }

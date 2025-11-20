@@ -167,6 +167,57 @@ aws:
   ]
 }
 ```
+
+- 각 Run 별 진행 상황 및 히스토리 데이터 출력
+```json
+{
+  "id": 105,
+  "status": "SUCCESS",
+  "githubRunId": "987654321",
+  "githubRunUrl": "https://github.com/user/repo/actions/runs/987654321",
+  "timings": {
+    "createdAt": "2025-11-20T14:00:00",
+    "finishedAt": "2025-11-20T14:01:30",
+    "duration": "1m 30s"
+  },
+  "meta": {
+    "project": "cicd_backend",
+    "cluster": "my-ecs-cluster",
+    "service": "backend-service",
+    "taskDefArn": "arn:aws:ecs:us-east-1:123456:task-definition/app:15",
+    "imageTag": "v1.0.1-a1b2c3d"
+  },
+  "commit": {
+    "message": "Fix: Log streaming connection issue",
+    "hash": "a1b2c3d",
+    "author": "Developer Kim",
+    "branch": "main"
+  },
+  "steps": [
+    {
+      "name": "build",
+      "status": "SUCCESS",
+      "duration": "45s",
+      "githubJobId": 12345678,
+      "startedAt": "2025-11-20T14:00:05"
+    },
+    {
+      "name": "test",
+      "status": "SUCCESS",
+      "duration": "30s",
+      "githubJobId": 12345679,
+      "startedAt": "2025-11-20T14:00:50"
+    },
+    {
+      "name": "deploy",
+      "status": "SUCCESS",
+      "duration": "15s",
+      "githubJobId": 12345680,
+      "startedAt": "2025-11-20T14:01:20"
+    }
+  ]
+}
+```
     - 각 Step 별 로그 출력
         - 프론트엔드 에서 JobID를 Request로 받아 GitHub Rest API를 이용해 로그를 SSE로 전달
         - 

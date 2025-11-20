@@ -1,18 +1,12 @@
 package cat.cicd.controller;
 
 import cat.cicd.dto.request.ProjectRequest;
-import cat.cicd.dto.response.WorkflowInfoResponse;
 import cat.cicd.dto.response.ProjectResponse;
 import cat.cicd.entity.Project;
 import cat.cicd.global.common.CommonResponse;
-import cat.cicd.global.exception.ErrorResponse;
 import cat.cicd.service.ECSService;
 import cat.cicd.service.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

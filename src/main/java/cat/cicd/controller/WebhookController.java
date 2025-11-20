@@ -27,6 +27,10 @@ public class WebhookController {
 			githubActionService.handleWorkflowJobWebhook(payload);
 		}
 
+		else if ("workflow_run".equals(eventType)) {
+			githubActionService.handleWorkflowRunWebhook(payload);
+		}
+
 		return ResponseEntity.ok().build();
 	}
 }

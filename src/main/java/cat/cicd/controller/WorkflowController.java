@@ -1,7 +1,6 @@
 package cat.cicd.controller;
 
 import cat.cicd.dto.request.GitHubBaseRequest;
-import cat.cicd.dto.response.WorkflowInfoResponse;
 import cat.cicd.service.GithubActionService;
 import cat.cicd.global.common.CommonResponse;
 import cat.cicd.global.exception.ErrorResponse;
@@ -23,13 +22,8 @@ public class WorkflowController {
 	private final GithubActionService gitHubActionService;
 
 	@Operation(summary = "파이프라인 목록 조회 API", description = "해당 레포지토리의 전체 파이프라인을 조회해오는 API 입니다.")
-	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200", description = "조회 성공",
-					content = @Content(schema =  @Schema(implementation = WorkflowInfoResponse.class))),
-			@ApiResponse(responseCode = "404", description = "존재하지 않는 Run ID",
-					content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-	})
 	@GetMapping()
+	@Deprecated
 	public ResponseEntity<CommonResponse> getPipelines(
 			@RequestBody GitHubBaseRequest req
 	) {
@@ -49,6 +43,7 @@ public class WorkflowController {
 					content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@GetMapping("{runId}/jobs")
+	@Deprecated
 	public ResponseEntity<CommonResponse> getJobList(
 			@PathVariable long runId,
 			@RequestBody GitHubBaseRequest req
@@ -69,6 +64,7 @@ public class WorkflowController {
 					content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@GetMapping("job/{jobId}")
+	@Deprecated
 	public ResponseEntity<CommonResponse> getJobInfo(
 			@PathVariable long jobId,
 			@RequestBody GitHubBaseRequest req
@@ -78,21 +74,6 @@ public class WorkflowController {
 						HttpStatus.OK,
 						"jobs list",
 						gitHubActionService.getJobInfo(req.owner(), req.repo(), jobId)
-				)
-		);
-	}
-
-	@Deprecated
-	@GetMapping("{runId}/runs/logs")
-	public ResponseEntity<CommonResponse> getRunsLogs(
-			@PathVariable long runId,
-			@RequestBody GitHubBaseRequest req
-	) {
-		return ResponseEntity.ok(
-				new CommonResponse(
-						HttpStatus.OK,
-						"Get Job's Log",
-						gitHubActionService.getRunLogs(req.owner(), req.repo(), runId)
 				)
 		);
 	}
@@ -124,6 +105,7 @@ public class WorkflowController {
 					content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@PostMapping("{workflowId}/start")
+	@Deprecated
 	public ResponseEntity<Void> runJob(
 			@PathVariable long workflowId,
 			@RequestParam(defaultValue = "main") String branch,
@@ -140,6 +122,7 @@ public class WorkflowController {
 					content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@PostMapping("{runId}/cancel")
+	@Deprecated
 	public ResponseEntity<CommonResponse> cancelJob(
 			@PathVariable long runId,
 			@RequestBody GitHubBaseRequest req
@@ -155,6 +138,7 @@ public class WorkflowController {
 					content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@PostMapping("{runId}/rerun")
+	@Deprecated
 	public ResponseEntity<CommonResponse> rerunJob(
 			@PathVariable long runId,
 			@RequestBody GitHubBaseRequest req
