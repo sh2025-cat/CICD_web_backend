@@ -12,17 +12,19 @@ public class RepoDeployStatusResponse {
 	private Long id;
 	private String name;
 	private String tag;
+    private String status;
 	private String commitHash;
 	private String commitMsg;
 
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss.SSS")
 	private LocalDateTime deployedAt;
 
-	public static RepoDeployStatusResponse of(Long id, String name, String tag, String commitHash, String commitMsg, LocalDateTime deployedAt) {
+	public static RepoDeployStatusResponse of(Long id, String name, String tag, String status, String commitHash, String commitMsg, LocalDateTime deployedAt) {
 		return RepoDeployStatusResponse.builder()
 				.id(id)
 				.name(name)
 				.tag(tag)
+                .status(status)
 				.commitHash(commitHash)
 				.commitMsg(commitMsg)
 				.deployedAt(deployedAt)

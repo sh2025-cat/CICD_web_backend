@@ -151,7 +151,7 @@ public class ECSService {
                 Deployment rollbackDeployment = new Deployment(project, lastSuccessfulDeployment.getGithubRunId(),
                                 project.getEcsClusterName(), project.getEcsServiceName());
                 rollbackDeployment.setTaskDefinitionArn(rollbackTaskDefinitionArn);
-                rollbackDeployment.setStatus(Deployment.DeploymentStatus.ROLLED_BACK);
+                rollbackDeployment.setStatus(Deployment.DeploymentStatus.SUCCESS);
                 rollbackDeployment.setPreviousDeployment(lastSuccessfulDeployment);
 
                 return deploymentRepository.save(rollbackDeployment);

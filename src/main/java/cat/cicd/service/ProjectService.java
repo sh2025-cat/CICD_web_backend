@@ -32,6 +32,7 @@ public class ProjectService {
 						return RepoDeployStatusResponse.of(
 								project.getId(),
 								project.getName(),
+                                latestDeployment.getStatus().name(),
 								latestDeployment.getImageTag(),
 								latestDeployment.getCommitHash(),
 								latestDeployment.getCommitMessage(),
@@ -40,7 +41,7 @@ public class ProjectService {
 						return RepoDeployStatusResponse.of(
 								project.getId(),
 								project.getName(),
-								null, null, null, null);
+                                null, Deployment.DeploymentStatus.PENDING.name(), null, null, null);
 					}
 				})
 				.toList();

@@ -45,6 +45,12 @@ public class Deployment {
 	@Setter
 	@Column
 	private String imageTag;
+    @Setter
+    @Column
+    private String lastStep;
+    @Setter
+    @Column
+    private String pipelineStatus;
 
 	@Column(nullable = false)
 	private String targetCluster;
@@ -85,6 +91,6 @@ public class Deployment {
 	}
 
 	public enum DeploymentStatus {
-		PENDING, IN_PROGRESS, SUCCESS, FAILED, CANCELLED, ROLLED_BACK
+		PENDING, IN_PROGRESS, SUCCESS, FAILED
 	}
 }

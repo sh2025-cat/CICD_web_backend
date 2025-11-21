@@ -48,106 +48,150 @@ public class GithubActionService {
 		this.restClient = RestClient.create();
 	}
 
-	@Transactional
-	public void handleWorkflowJobWebhook(Map<String, Object> payload) {
-		Map<String, Object> job = (Map<String, Object>) payload.get("workflow_job");
-		Map<String, Object> repo = (Map<String, Object>) payload.get("repository");
+    @Transactional
+    public void handleWorkflowJobWebhook(Map<String, Object> payload) {
+        Map<String, Object> job = (Map<String, Object>) payload.get("workflow_job");
+        Map<String, Object> repo = (Map<String, Object>) payload.get("repository");
 
-		if (job == null || repo == null)
-			return;
+        if (job == null || repo == null) return;
 
-		String repoName = (String) repo.get("name");
-		String runId = String.valueOf(job.get("run_id"));
-		Long jobId = ((Number) job.get("id")).longValue();
-		String jobName = (String) job.get("name");
-		String status = (String) job.get("status");
-		String conclusion = (String) job.get("conclusion");
+        String repoName = (String) repo.get("name");
+        String repoUrl = (String) repo.get("html_url");
+        Map<String, Object> ownerMap = (Map<String, Object>) repo.get("owner");
+        String ownerName = (String) ownerMap.get("login");
 
-		Deployment deployment = deploymentRepository.findByGithubRunId(runId)
-				.orElseGet(() -> {
-					Project project = projectRepository.findByName(repoName)
-							.orElseThrow(() -> new RuntimeException("Project not found: " + repoName));
+        String runId = String.valueOf(job.get("run_id"));
+        Long jobId = ((Number) job.get("id")).longValue();
+        String jobName = (String) job.get("name");
+        String status = (String) job.get("status");
+        String conclusion = (String) job.get("conclusion");
 
-					return deploymentRepository.save(
-							Deployment.builder()
-									.project(project)
-									.githubRunId(runId)
-									.targetCluster(project.getEcsClusterName())
-									.targetService(project.getEcsServiceName())
-									.build());
-				});
+        Project project = projectRepository.findByOwnerAndName(ownerName, repoName)
+                .orElseGet(() -> projectRepository.save(
+                        Project.builder()
+                                .owner(ownerName)
+                                .name(repoName)
+                                .githubRepoUrl(repoUrl)
+                                .build()
+                ));
 
-		DeploymentStage stage = deployment.getStages().stream()
-				.filter(s -> s.getGithubJobId() != null && s.getGithubJobId().equals(jobId))
-				.findFirst()
-				.orElseGet(() -> {
-					DeploymentStage newStage = DeploymentStage.builder()
-							.name(jobName)
-							.githubJobId(jobId)
-							.status(DeploymentStage.StageStatus.PENDING)
-							.build();
-					deployment.addStage(newStage);
-					return newStage;
-				});
+        Deployment deployment = deploymentRepository.findByGithubRunId(runId)
+                .orElseGet(() -> {
+                    String cluster = project.getEcsClusterName() != null ? project.getEcsClusterName() : "";
+                    String service = project.getEcsServiceName() != null ? project.getEcsServiceName() : "";
 
-		if (conclusion != null) {
-			if ("success".equalsIgnoreCase(conclusion)) {
-				stage.complete();
-			} else if ("failure".equalsIgnoreCase(conclusion) || "cancelled".equalsIgnoreCase(conclusion)) {
-				stage.fail();
-			} else {
-				stage.setStatus(DeploymentStage.StageStatus.IN_PROGRESS);
-			}
-		} else {
-			if ("in_progress".equalsIgnoreCase(status)) {
-				stage.setStatus(DeploymentStage.StageStatus.IN_PROGRESS);
-			} else if ("queued".equalsIgnoreCase(status)) {
-				stage.setStatus(DeploymentStage.StageStatus.PENDING);
-			}
-		}
+                    return deploymentRepository.save(
+                            Deployment.builder()
+                                    .project(project)
+                                    .githubRunId(runId)
+                                    .targetCluster(cluster)
+                                    .targetService(service)
+                                    .build());
+                });
 
-		if ("in_progress".equals(status) && stage.getStartedAt() == null) {
-			stage.setStartedAt(LocalDateTime.now());
-		}
+        DeploymentStage stage = deployment.getStages().stream()
+                .filter(s -> s.getGithubJobId() != null && s.getGithubJobId().equals(jobId))
+                .findFirst()
+                .orElseGet(() -> {
+                    DeploymentStage newStage = DeploymentStage.builder()
+                            .name(jobName)
+                            .githubJobId(jobId)
+                            .status(DeploymentStage.StageStatus.PENDING)
+                            .build();
+                    deployment.addStage(newStage);
+                    return newStage;
+                });
 
-		if ("completed".equals(status)) {
-			stage.setCompletedAt(LocalDateTime.now());
-		}
+        if (conclusion != null) {
+            if ("success".equalsIgnoreCase(conclusion)) {
+                stage.complete();
+            } else if ("failure".equalsIgnoreCase(conclusion) || "cancelled".equalsIgnoreCase(conclusion)) {
+                stage.fail();
+            } else {
+                stage.setStatus(DeploymentStage.StageStatus.IN_PROGRESS);
+            }
+        } else {
+            if ("in_progress".equalsIgnoreCase(status)) {
+                stage.setStatus(DeploymentStage.StageStatus.IN_PROGRESS);
+            } else if ("queued".equalsIgnoreCase(status)) {
+                stage.setStatus(DeploymentStage.StageStatus.PENDING);
+            }
+        }
 
-		if ("failure".equalsIgnoreCase(conclusion)) {
-			deployment.setStatus(Deployment.DeploymentStatus.FAILED);
-		} else if ("success".equalsIgnoreCase(conclusion) && jobName.toLowerCase().contains("build")) {
-			if (jobName.toLowerCase().contains("build")) {
-				deployment.setStatus(Deployment.DeploymentStatus.SUCCESS);
-			}
-		}
+        if ("in_progress".equals(status) && stage.getStartedAt() == null) {
+            stage.setStartedAt(LocalDateTime.now());
+        }
 
-		deploymentRepository.save(deployment);
+        if ("completed".equals(status)) {
+            stage.setCompletedAt(LocalDateTime.now());
+        }
 
-		sseService.send(repoName, "deployment_update", stage);
-	}
+        if ("failure".equalsIgnoreCase(conclusion)) {
+            deployment.setStatus(Deployment.DeploymentStatus.FAILED);
+        } else if ("success".equalsIgnoreCase(conclusion) && jobName.toLowerCase().contains("build")) {
+            deployment.setStatus(Deployment.DeploymentStatus.SUCCESS);
+        }
 
-	@Transactional
-	public void handleWorkflowRunWebhook(Map<String, Object> payload) {
-		String action = (String) payload.get("action");
+        deploymentRepository.save(deployment);
+        sseService.send(repoName, "deployment_update", stage);
+    }
 
-		if ("completed".equals(action)) {
-			Map<String, Object> run = (Map<String, Object>) payload.get("workflow_run");
-			String runId = String.valueOf(run.get("id"));
-			String conclusion = (String) run.get("conclusion");
+    @Transactional
+    public void handleWorkflowRunWebhook(Map<String, Object> payload) {
+        String action = (String) payload.get("action");
 
-			Deployment deployment = deploymentRepository.findByGithubRunId(runId).orElse(null);
-			if (deployment != null) {
-				if ("success".equals(conclusion)) {
-					deployment.setStatus(Deployment.DeploymentStatus.SUCCESS);
-				} else {
-					deployment.setStatus(Deployment.DeploymentStatus.FAILED);
-				}
-				sseService.send(deployment.getProject().getName(), "deployment_complete", deployment);
-				deploymentRepository.save(deployment);
-			}
-		}
-	}
+        if ("completed".equals(action)) {
+            Map<String, Object> run = (Map<String, Object>) payload.get("workflow_run");
+            Map<String, Object> repo = (Map<String, Object>) run.get("repository");
+            Map<String, Object> owner = (Map<String, Object>) repo.get("owner");
+
+            String runId = String.valueOf(run.get("id"));
+            String conclusion = (String) run.get("conclusion");
+            String repoName = (String) repo.get("name");
+            String repoUrl = (String) repo.get("html_url");
+            String ownerName = (String) owner.get("login");
+
+            Project project = projectRepository.findByOwnerAndName(ownerName, repoName)
+                    .orElseGet(() -> projectRepository.save(
+                            Project.builder()
+                                    .owner(ownerName)
+                                    .name(repoName)
+                                    .githubRepoUrl(repoUrl)
+                                    .build()
+                    ));
+
+            Deployment deployment = deploymentRepository.findByGithubRunId(runId)
+                    .orElseGet(() -> Deployment.builder()
+                            .project(project)
+                            .githubRunId(runId)
+                            .targetCluster("")
+                            .targetService("")
+                            .build());
+
+            Map<String, Object> headCommit = (Map<String, Object>) run.get("head_commit");
+            String headBranch = (String) run.get("head_branch");
+
+            if (headCommit != null) {
+                deployment.setCommitHash((String) headCommit.get("id"));
+                deployment.setCommitMessage((String) headCommit.get("message"));
+
+                Map<String, Object> author = (Map<String, Object>) headCommit.get("author");
+                if (author != null) {
+                    deployment.setCommitAuthor((String) author.get("name"));
+                }
+            }
+            deployment.setCommitBranch(headBranch);
+
+            if ("success".equals(conclusion)) {
+                deployment.setStatus(Deployment.DeploymentStatus.SUCCESS);
+            } else {
+                deployment.setStatus(Deployment.DeploymentStatus.FAILED);
+            }
+
+            Deployment savedDeployment = deploymentRepository.save(deployment);
+            sseService.send(savedDeployment.getProject().getName(), "deployment_complete", savedDeployment);
+        }
+    }
 
 	/**
 	 * Repository 내 모든 파이프라인 실행 리스트를 가져온다.
