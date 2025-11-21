@@ -32,12 +32,11 @@ public class ECSService {
         @Value("${aws.ecr.repository-uri-prefix}")
         private String ecrRepositoryUriPrefix;
 
-        public ECSService(EcsClient ecsClient,
-                        ProjectRepository projectRepository, DeploymentRepository deploymentRepository) {
-                this.ecsClient = ecsClient;
-                this.taggingApiClient = ResourceGroupsTaggingApiClient.create();
-                this.projectRepository = projectRepository;
-                this.deploymentRepository = deploymentRepository;
+        public ECSService(EcsClient ecsClient, ProjectRepository projectRepository, DeploymentRepository deploymentRepository) {
+			this.ecsClient = ecsClient;
+			this.taggingApiClient = ResourceGroupsTaggingApiClient.create();
+            this.projectRepository = projectRepository;
+            this.deploymentRepository = deploymentRepository;
         }
 
         @Transactional
@@ -75,7 +74,7 @@ public class ECSService {
 
                 List<ContainerDefinition> newContainerDefinitions = currentTaskDefinition.containerDefinitions()
                                 .stream()
-                                .map(cd -> cd.name().equals(project.getEcsServiceName())
+                                .map(cd -> cd.name().equals(project.getContainerName())
                                                 ? cd.toBuilder().image(imageUri).build()
                                                 : cd)
                                 .collect(Collectors.toList());
@@ -160,42 +159,41 @@ public class ECSService {
 
         @Transactional
         public Project discoverAndSaveEcsInfo(long projectId) {
-                Project project = projectRepository.findById(projectId)
-                                .orElseThrow(() -> new RuntimeException("Project not found with id: " + projectId));
+			Project project = projectRepository.findById(projectId)
+					.orElseThrow(() -> new RuntimeException("Project not found with id: " + projectId));
 
-                log.info("Attempting to discover ECS info for project: {}", project.getName());
-                TagFilter tagFilter = TagFilter.builder()
-                                .key("ProjectRepo")
-                                .values(project.getName())
-                                .build();
+			log.info("Attempting to discover ECS info for project: {}", project.getName());
+			TagFilter tagFilter = TagFilter.builder()
+					.key("ProjectRepo")
+					.values(project.getName())
+					.build();
 
-                GetResourcesRequest resourcesRequest = GetResourcesRequest.builder()
-                                .resourceTypeFilters("ecs:service")
-                                .tagFilters(tagFilter)
-                                .build();
+			GetResourcesRequest resourcesRequest = GetResourcesRequest.builder()
+					.resourceTypeFilters("ecs:service")
+					.tagFilters(tagFilter)
+					.build();
 
-                List<ResourceTagMapping> mappings = taggingApiClient.getResources(resourcesRequest)
-                                .resourceTagMappingList();
+			List<ResourceTagMapping> mappings = taggingApiClient.getResources(resourcesRequest)
+					.resourceTagMappingList();
 
-                if (mappings.isEmpty()) {
-                        throw new RuntimeException("No tagged ECS service found for project: " + project.getName());
-                }
-                if (mappings.size() > 1) {
-                        log.warn("Multiple tagged ECS services found for project: {}. Using the first one.",
-                                        project.getName());
-                }
+			if (mappings.isEmpty()) {
+					throw new RuntimeException("No tagged ECS service found for project: " + project.getName());
+			}
+			if (mappings.size() > 1) {
+					log.warn("Multiple tagged ECS services found for project: {}. Using the first one.", project.getName());
+			}
 
-                String arn = mappings.getFirst().resourceARN();
-                // arn:aws:ecs:ap-northeast-2:123456789012:service/dev-cluster/cat-frontend-svc
-                String[] parts = arn.split(":");
-                String[] serviceParts = parts[parts.length - 1].split("/");
+			String arn = mappings.getFirst().resourceARN();
+			// arn:aws:ecs:ap-northeast-2:123456789012:service/dev-cluster/cat-frontend-svc
+			String[] parts = arn.split(":");
+			String[] serviceParts = parts[parts.length - 1].split("/");
 
-                String clusterName = serviceParts[1];
-                String serviceName = serviceParts[2];
+			String clusterName = serviceParts[1];
+			String serviceName = serviceParts[2];
 
-                project.setEcsClusterName(clusterName);
-                project.setEcsServiceName(serviceName);
-                return projectRepository.save(project);
+			project.setEcsClusterName(clusterName);
+			project.setEcsServiceName(serviceName);
+			return projectRepository.save(project);
         }
 
         public List<String> listClusters() {
