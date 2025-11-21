@@ -12,35 +12,28 @@ import software.amazon.awssdk.services.resourcegroupstaggingapi.ResourceGroupsTa
 @Configuration
 public class AwsSdkConfig {
 
-    @Bean
-    public EcsClient ecsClient() {
-        return EcsClient.builder()
-                .credentialsProvider(DefaultCredentialsProvider.builder().build())
-                .region(Region.AP_NORTHEAST_2)
-                .build();
-    }
+	@Bean
+	public EcsClient ecsClient() {
+		return EcsClient.builder().credentialsProvider(DefaultCredentialsProvider.builder().build())
+				.region(Region.AP_NORTHEAST_2).build();
+	}
 
 	@Bean
 	public EcrClient ecrClient() {
-		return EcrClient.builder()
-				.credentialsProvider(DefaultCredentialsProvider.builder().build())
-				.region(Region.AP_NORTHEAST_2)
-				.build();
+		return EcrClient.builder().credentialsProvider(DefaultCredentialsProvider.builder().build())
+				.region(Region.AP_NORTHEAST_2).build();
 	}
 
 	@Bean
 	public CloudWatchClient cloudWatchClient() {
-		return CloudWatchClient.builder()
-				.credentialsProvider(DefaultCredentialsProvider.builder().build())
-				.region(Region.AP_NORTHEAST_2)
-				.build();
+		return CloudWatchClient.builder().credentialsProvider(DefaultCredentialsProvider.builder().build())
+				.region(Region.AP_NORTHEAST_2).build();
 	}
 
 	@Bean
 	public ResourceGroupsTaggingApiClient resourceGroupsTaggingApiClient() {
 		return ResourceGroupsTaggingApiClient.builder()
-				.credentialsProvider(DefaultCredentialsProvider.builder().build())
-				.region(Region.AP_NORTHEAST_2)
+				.credentialsProvider(DefaultCredentialsProvider.builder().build()).region(Region.AP_NORTHEAST_2)
 				.build();
 	}
 }

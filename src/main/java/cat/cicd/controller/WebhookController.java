@@ -12,25 +12,21 @@ import java.util.Map;
 @Tag(name = "Webhook Controller", description = "외부 서비스(GitHub, etc.)로부터 웹훅을 수신하는 API")
 @Slf4j
 @RestController
-@RequestMapping("/api/webhook")
+@RequestMapping("/api/ci-webhook")
 @RequiredArgsConstructor
 public class WebhookController {
 
 	private final GithubActionService githubActionService;
 
-	@PostMapping("/github")
+	@PostMapping()
 	public ResponseEntity<Void> handleGithubWebhook(
 			@RequestHeader(value = "X-GitHub-Event", defaultValue = "unknown") String eventType,
-			@RequestBody Map<String, Object> payload
-	) {
-		if ("workflow_job".equals(eventType)) {
+			@RequestBody Map<String, Object> payload) {
+		if (payload.containsKey("workflow_job")) {
 			githubActionService.handleWorkflowJobWebhook(payload);
-		}
-
-		else if ("workflow_run".equals(eventType)) {
+		} else if (payload.containsKey("workflow_run")) {
 			githubActionService.handleWorkflowRunWebhook(payload);
 		}
-
 		return ResponseEntity.ok().build();
 	}
 }

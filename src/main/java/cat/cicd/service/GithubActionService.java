@@ -1,8 +1,8 @@
 package cat.cicd.service;
 
 import cat.cicd.entity.Deployment;
+import cat.cicd.entity.DeploymentStage;
 import cat.cicd.entity.Project;
-import cat.cicd.entity.vo.DeploymentStep;
 import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.repository.ProjectRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -40,7 +40,8 @@ public class GithubActionService {
 	private final ProjectRepository projectRepository;
 	private final SseService sseService;
 
-	public GithubActionService(DeploymentRepository deploymentRepository, ProjectRepository projectRepository, SseService sseService) {
+	public GithubActionService(DeploymentRepository deploymentRepository, ProjectRepository projectRepository,
+			SseService sseService) {
 		this.deploymentRepository = deploymentRepository;
 		this.projectRepository = projectRepository;
 		this.sseService = sseService;
@@ -52,7 +53,8 @@ public class GithubActionService {
 		Map<String, Object> job = (Map<String, Object>) payload.get("workflow_job");
 		Map<String, Object> repo = (Map<String, Object>) payload.get("repository");
 
-		if (job == null || repo == null) return;
+		if (job == null || repo == null)
+			return;
 
 		String repoName = (String) repo.get("name");
 		String runId = String.valueOf(job.get("run_id"));
@@ -72,39 +74,57 @@ public class GithubActionService {
 									.githubRunId(runId)
 									.targetCluster(project.getEcsClusterName())
 									.targetService(project.getEcsServiceName())
-									.build()
-					);
+									.build());
 				});
 
-		DeploymentStep step = deployment.getSteps().stream()
-				.filter(s -> s.getGithubJobId().equals(jobId))
+		DeploymentStage stage = deployment.getStages().stream()
+				.filter(s -> s.getGithubJobId() != null && s.getGithubJobId().equals(jobId))
 				.findFirst()
-				.orElseGet(() -> DeploymentStep.builder()
-						.name(jobName)
-						.githubJobId(jobId)
-						.build());
+				.orElseGet(() -> {
+					DeploymentStage newStage = DeploymentStage.builder()
+							.name(jobName)
+							.githubJobId(jobId)
+							.status(DeploymentStage.StageStatus.PENDING)
+							.build();
+					deployment.addStage(newStage);
+					return newStage;
+				});
 
-		step.setStatus(conclusion != null ? conclusion.toUpperCase() : status.toUpperCase());
+		if (conclusion != null) {
+			if ("success".equalsIgnoreCase(conclusion)) {
+				stage.complete();
+			} else if ("failure".equalsIgnoreCase(conclusion) || "cancelled".equalsIgnoreCase(conclusion)) {
+				stage.fail();
+			} else {
+				stage.setStatus(DeploymentStage.StageStatus.IN_PROGRESS);
+			}
+		} else {
+			if ("in_progress".equalsIgnoreCase(status)) {
+				stage.setStatus(DeploymentStage.StageStatus.IN_PROGRESS);
+			} else if ("queued".equalsIgnoreCase(status)) {
+				stage.setStatus(DeploymentStage.StageStatus.PENDING);
+			}
+		}
 
-		if ("in_progress".equals(status) && step.getStartedAt() == null) {
-			step.setStartedAt(LocalDateTime.now());
+		if ("in_progress".equals(status) && stage.getStartedAt() == null) {
+			stage.setStartedAt(LocalDateTime.now());
 		}
 
 		if ("completed".equals(status)) {
-			step.setCompletedAt(LocalDateTime.now());
+			stage.setCompletedAt(LocalDateTime.now());
 		}
-
-		deployment.updateStep(step);
 
 		if ("failure".equalsIgnoreCase(conclusion)) {
 			deployment.setStatus(Deployment.DeploymentStatus.FAILED);
-		} else if ("success".equalsIgnoreCase(conclusion) && jobName.toLowerCase().contains("deploy")) {
-			deployment.setStatus(Deployment.DeploymentStatus.SUCCESS);
+		} else if ("success".equalsIgnoreCase(conclusion) && jobName.toLowerCase().contains("build")) {
+			if (jobName.toLowerCase().contains("build")) {
+				deployment.setStatus(Deployment.DeploymentStatus.SUCCESS);
+			}
 		}
 
 		deploymentRepository.save(deployment);
 
-		sseService.send(repoName, "deployment_update", step);
+		sseService.send(repoName, "deployment_update", stage);
 	}
 
 	@Transactional
@@ -124,15 +144,16 @@ public class GithubActionService {
 					deployment.setStatus(Deployment.DeploymentStatus.FAILED);
 				}
 				sseService.send(deployment.getProject().getName(), "deployment_complete", deployment);
+				deploymentRepository.save(deployment);
 			}
 		}
 	}
 
-
 	/**
 	 * Repository 내 모든 파이프라인 실행 리스트를 가져온다.
+	 * 
 	 * @param owner GitHub User / Organization
-	 * @param repo Repository Name
+	 * @param repo  Repository Name
 	 * @return Json 타입의 결과
 	 */
 	public JsonNode getPipelinesInRepository(String owner, String repo) {
@@ -148,8 +169,9 @@ public class GithubActionService {
 
 	/**
 	 * 특정 Run 내에 실행된 모든 Job 리스트를 조회한다.
+	 * 
 	 * @param owner GitHub User / Organization
-	 * @param repo Repository Name
+	 * @param repo  Repository Name
 	 * @param runId Run ID
 	 * @return Json 타입의 결과 ( 반환 예정)
 	 */
@@ -187,8 +209,7 @@ public class GithubActionService {
 
 	public void startPipeline(String owner, String repo, long workflowId, String branchName) {
 		Map<String, String> body = Map.of(
-				"ref", branchName
-		);
+				"ref", branchName);
 
 		restClient.post()
 				.uri(BASE_URL + "/repos/" + owner + "/" + repo + "/actions/workflows/" + workflowId + "/dispatches")
@@ -255,8 +276,9 @@ public class GithubActionService {
 
 	/**
 	 * Git Action의 로그를 다운로드 받을 URL을 가져온다.
+	 * 
 	 * @param owner GitHub User / Organization
-	 * @param repo Repository Name
+	 * @param repo  Repository Name
 	 * @param jobId jobId
 	 * @return 다운로드 URL
 	 */

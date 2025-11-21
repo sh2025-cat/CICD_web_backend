@@ -92,28 +92,34 @@ aws:
     - 랜딩 페이지
         레포지토리 별 가장 최근 배포 정보 출력
         -> GitHub Actions에서 배포가 끝날 때마다 웹훅을 발생시키고 백엔드에서 이를 받아 배포 히스토리를 모두 DB에 저장
-        -> 랜딩 페이지 조회 API(/api/repos)
+        -> 랜딩 페이지 조회 GET API(GET /api/repos)
             결과 형태
-            data: [
-                {
-                    "name": "cicd_frontend",
-                    "tag": "v1.1.0 | COMMIT_HASH",
-                    "commit_hash": "COMMIT_HASH",
-                    "commit_msg": "커밋 메세지",
-                    "deployed_at": "2025-11-20 11:11:11.000"
-                },
-                {
-                    "name": "cicd_backend",
-                    "tag": "v1.1.0 | COMMIT_HASH",
-                    "commit_hash": "COMMIT_HASH",
-                    "commit_msg": "커밋 메세지",
-                    "deployed_at": "2025-11-20 11:11:11.000"
-                }
-            ]
+```json
+{
+  "data": [
+      {
+          "id": 1,
+          "name": "cicd_frontend",
+          "tag": "v1.1.0 | COMMIT_HASH",
+          "commit_hash": "COMMIT_HASH",
+          "commit_msg": "커밋 메세지",
+          "deployed_at": "2025-11-20 11:11:11.000"
+      },
+      {
+          "id": 2,
+          "name": "cicd_backend",
+          "tag": "v1.1.0 | COMMIT_HASH",
+          "commit_hash": "COMMIT_HASH",
+          "commit_msg": "커밋 메세지",
+          "deployed_at": "2025-11-20 11:11:11.000"
+      }
+  ]
+}
+```
     - 레포지토리 별 배포 리스트 출력
         -> GitHub Actions에서 ECR 배포가 끝날 떄마다 웹훅을 전송해 배포 결과에 대한 데이터를 DB에 저장한다.
         -> 프론트엔드에는 특정 레포지토리에서 발생한 배포 내역을 화면에 보여준다
-        -> 레포지토리 배포 리스트 조회 API(/api/repos/{project_id}/deployments)
+        -> 레포지토리 배포 리스트 조회 API(GET /api/repos/{project_id}/deployments)
             결과 형태
 ```json
 {
@@ -169,6 +175,8 @@ aws:
 ```
 
 - 각 Run 별 진행 상황 및 히스토리 데이터 출력
+- -> 직접 Run을 선택하면 해당 배포 작업의 세부 내용을 반환해주는 API
+- -> Run 상세 조회 API (GET /api/repos/deployment/{deploymentId})
 ```json
 {
   "id": 105,

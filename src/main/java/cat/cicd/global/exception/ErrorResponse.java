@@ -12,7 +12,6 @@ import java.time.format.DateTimeFormatter;
 
 /**
  * @Summary API 요청에 대한 오류 응답 메시지를 담는 클래스
- *
  * @Description status: HTTP 상태 값 ex) OK, BAD_REQUEST, INTERNAL_SERVER_ERROR ... code: 오류 코드 message: 오류 메시지
  */
 @Getter

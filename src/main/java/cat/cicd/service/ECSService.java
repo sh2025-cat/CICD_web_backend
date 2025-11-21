@@ -1,9 +1,8 @@
 package cat.cicd.service;
 
-import cat.cicd.entity.Artifact;
 import cat.cicd.entity.Deployment;
 import cat.cicd.entity.Project;
-import cat.cicd.repository.ArtifactRepository;
+
 import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.repository.ProjectRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -25,161 +24,199 @@ import java.util.stream.Collectors;
 @Service
 public class ECSService {
 
-    private final EcsClient ecsClient;
-	private final ResourceGroupsTaggingApiClient taggingApiClient;
-    private final ProjectRepository projectRepository;
-    private final DeploymentRepository deploymentRepository;
-    private final ArtifactRepository artifactRepository;
+        private final EcsClient ecsClient;
+        private final ResourceGroupsTaggingApiClient taggingApiClient;
+        private final ProjectRepository projectRepository;
+        private final DeploymentRepository deploymentRepository;
 
-    @Value("${aws.ecr.repository-uri-prefix}")
-    private String ecrRepositoryUriPrefix;
+        @Value("${aws.ecr.repository-uri-prefix}")
+        private String ecrRepositoryUriPrefix;
 
-	public ECSService(EcsClient ecsClient,
-			ProjectRepository projectRepository, DeploymentRepository deploymentRepository,
-			ArtifactRepository artifactRepository) {
-		this.ecsClient = ecsClient;
-		this.taggingApiClient = ResourceGroupsTaggingApiClient.create();
-		this.projectRepository = projectRepository;
-		this.deploymentRepository = deploymentRepository;
-		this.artifactRepository = artifactRepository;
-	}
-
-	@Transactional
-    public Deployment deployNewVersion(String serviceName, String clusterName, String containerName, String imageTag) {
-        Project project = projectRepository.findByName(serviceName)
-                .orElseThrow(() -> new RuntimeException("Service not found: " + serviceName));
-
-        String imageUri = ecrRepositoryUriPrefix + "/" + project.getEcsServiceName() + ":" + imageTag;
-        Artifact artifact = artifactRepository.findByImageUri(imageUri)
-                .orElseGet(() -> artifactRepository.save(new Artifact(project.getEcsServiceName(), imageTag, imageUri)));
-
-        DescribeServicesResponse describeServicesResponse = ecsClient.describeServices(
-                b -> b.cluster(clusterName).services(serviceName));
-        if (describeServicesResponse.services().isEmpty()) {
-            throw new RuntimeException("ECS service not found: " + serviceName);
+        public ECSService(EcsClient ecsClient,
+                        ProjectRepository projectRepository, DeploymentRepository deploymentRepository) {
+                this.ecsClient = ecsClient;
+                this.taggingApiClient = ResourceGroupsTaggingApiClient.create();
+                this.projectRepository = projectRepository;
+                this.deploymentRepository = deploymentRepository;
         }
-        String currentTaskDefinitionArn = describeServicesResponse.services().getFirst().taskDefinition();
-        TaskDefinition currentTaskDefinition = ecsClient.describeTaskDefinition(
-                b -> b.taskDefinition(currentTaskDefinitionArn)).taskDefinition();
 
-        List<ContainerDefinition> newContainerDefinitions = currentTaskDefinition.containerDefinitions().stream()
-                .map(cd -> cd.name().equals(containerName) ? cd.toBuilder().image(imageUri).build() : cd)
-                .collect(Collectors.toList());
+        @Transactional
+        public Deployment deployNewVersion(Long deploymentId, String imageTag) {
+                Deployment deployment = deploymentRepository.findById(deploymentId)
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                                "Deployment not found with id: " + deploymentId));
 
-        RegisterTaskDefinitionResponse registerTaskDefResponse = ecsClient.registerTaskDefinition(RegisterTaskDefinitionRequest.builder()
-                .family(currentTaskDefinition.family())
-                .volumes(currentTaskDefinition.volumes())
-                .networkMode(currentTaskDefinition.networkMode())
-                .requiresCompatibilities(currentTaskDefinition.requiresCompatibilities())
-                .cpu(currentTaskDefinition.cpu())
-                .memory(currentTaskDefinition.memory())
-                .executionRoleArn(currentTaskDefinition.executionRoleArn())
-                .taskRoleArn(currentTaskDefinition.taskRoleArn())
-                .containerDefinitions(newContainerDefinitions)
-                .build());
+                Project project = deployment.getProject();
 
-        String newTaskDefinitionArn = registerTaskDefResponse.taskDefinition().taskDefinitionArn();
-        log.info("New Task Definition registered: {}", newTaskDefinitionArn);
+                if (project.getEcsClusterName() == null || project.getEcsClusterName().isEmpty()) {
+                        throw new IllegalArgumentException(
+                                        "ECS Cluster name not found for project: " + project.getName());
+                }
+                if (project.getEcsServiceName() == null || project.getEcsServiceName().isEmpty()) {
+                        throw new IllegalArgumentException(
+                                        "ECS Service name not found for project: " + project.getName());
+                }
 
-        ecsClient.updateService(UpdateServiceRequest.builder()
-                .cluster(clusterName)
-                .service(serviceName)
-                .taskDefinition(newTaskDefinitionArn)
-                .forceNewDeployment(true)
-                .build());
-        log.info("Update service requested for: {}", serviceName);
+                return deployNewVersion(deployment, project, imageTag);
+        }
 
-        Optional<Deployment> previousSuccessfulDeployment = deploymentRepository.findFirstByProjectAndStatusOrderByIdDesc(
-				project, Deployment.DeploymentStatus.SUCCESS);
+        @Transactional
+        protected Deployment deployNewVersion(Deployment deployment, Project project, String imageTag) {
+                String imageUri = ecrRepositoryUriPrefix + "/" + project.getEcsServiceName() + ":" + imageTag;
 
-        Deployment newDeployment = new Deployment(project, artifact, Deployment.DeploymentStatus.IN_PROGRESS, newTaskDefinitionArn);
-        previousSuccessfulDeployment.ifPresent(newDeployment::setPreviousDeployment);
+                DescribeServicesResponse describeServicesResponse = ecsClient.describeServices(
+                                b -> b.cluster(project.getEcsClusterName()).services(project.getEcsServiceName()));
+                if (describeServicesResponse.services().isEmpty()) {
+                        throw new RuntimeException("ECS service not found: " + project.getEcsServiceName());
+                }
+                String currentTaskDefinitionArn = describeServicesResponse.services().getFirst().taskDefinition();
+                TaskDefinition currentTaskDefinition = ecsClient.describeTaskDefinition(
+                                b -> b.taskDefinition(currentTaskDefinitionArn)).taskDefinition();
 
-        return deploymentRepository.save(newDeployment);
-    }
+                List<ContainerDefinition> newContainerDefinitions = currentTaskDefinition.containerDefinitions()
+                                .stream()
+                                .map(cd -> cd.name().equals(project.getEcsServiceName())
+                                                ? cd.toBuilder().image(imageUri).build()
+                                                : cd)
+                                .collect(Collectors.toList());
 
-    @Transactional
-    public Deployment rollbackToPreviousVersion(String serviceName, String clusterName) {
-        Project project = projectRepository.findByName(serviceName)
-                .orElseThrow(() -> new RuntimeException("Service not found: " + serviceName));
+                RegisterTaskDefinitionResponse registerTaskDefResponse = ecsClient
+                                .registerTaskDefinition(RegisterTaskDefinitionRequest.builder()
+                                                .family(currentTaskDefinition.family())
+                                                .volumes(currentTaskDefinition.volumes())
+                                                .networkMode(currentTaskDefinition.networkMode())
+                                                .requiresCompatibilities(
+                                                                currentTaskDefinition.requiresCompatibilities())
+                                                .cpu(currentTaskDefinition.cpu())
+                                                .memory(currentTaskDefinition.memory())
+                                                .executionRoleArn(currentTaskDefinition.executionRoleArn())
+                                                .taskRoleArn(currentTaskDefinition.taskRoleArn())
+                                                .containerDefinitions(newContainerDefinitions)
+                                                .build());
 
-        Deployment lastSuccessfulDeployment = deploymentRepository.findFirstByProjectAndStatusOrderByIdDesc(project, Deployment.DeploymentStatus.SUCCESS)
-                .orElseThrow(() -> new RuntimeException("No previous successful deployment found for service: " + serviceName));
+                String newTaskDefinitionArn = registerTaskDefResponse.taskDefinition().taskDefinitionArn();
+                log.info("New Task Definition registered: {}", newTaskDefinitionArn);
 
-        String rollbackTaskDefinitionArn = lastSuccessfulDeployment.getTaskDefinitionArn();
-        log.info("Rolling back service {} to task definition {}", serviceName, rollbackTaskDefinitionArn);
+                ecsClient.updateService(UpdateServiceRequest.builder()
+                                .cluster(project.getEcsClusterName())
+                                .service(project.getEcsServiceName())
+                                .taskDefinition(newTaskDefinitionArn)
+                                .forceNewDeployment(true)
+                                .build());
+                log.info("Update service requested for: {}", project.getEcsServiceName());
 
-        ecsClient.updateService(UpdateServiceRequest.builder()
-                .cluster(clusterName)
-                .service(serviceName)
-                .taskDefinition(rollbackTaskDefinitionArn)
-                .forceNewDeployment(true)
-                .build());
-        log.info("Rollback requested for service: {}", serviceName);
+                Optional<Deployment> previousSuccessfulDeployment = deploymentRepository
+                                .findFirstByProjectAndStatusOrderByIdDesc(
+                                                project, Deployment.DeploymentStatus.SUCCESS);
 
-        Deployment rollbackDeployment = new Deployment(project, lastSuccessfulDeployment.getArtifact(), Deployment.DeploymentStatus.ROLLED_BACK, rollbackTaskDefinitionArn);
-        rollbackDeployment.setPreviousDeployment(lastSuccessfulDeployment);
+                deployment.setTaskDefinitionArn(newTaskDefinitionArn);
+                deployment.setStatus(Deployment.DeploymentStatus.IN_PROGRESS);
 
-        return deploymentRepository.save(rollbackDeployment);
-    }
+                cat.cicd.entity.DeploymentStage deploymentStage = cat.cicd.entity.DeploymentStage.builder()
+                                .name("deploy")
+                                .status(cat.cicd.entity.DeploymentStage.StageStatus.IN_PROGRESS)
+                                .build();
+                deployment.addStage(deploymentStage);
 
-	@Transactional
-	public Project discoverAndSaveEcsInfo(String projectName) {
-		log.info("Attempting to discover ECS info for project: {}", projectName);
-		Project project = projectRepository.findByName(projectName)
-				.orElseThrow(() -> new RuntimeException("Project not found with name: " + projectName));
+                previousSuccessfulDeployment.ifPresent(deployment::setPreviousDeployment);
 
-		TagFilter tagFilter = TagFilter.builder()
-				.key("ProjectRepo")
-				.values(projectName)
-				.build();
+                return deploymentRepository.save(deployment);
+        }
 
-		GetResourcesRequest resourcesRequest = GetResourcesRequest.builder()
-				.resourceTypeFilters("ecs:service")
-				.tagFilters(tagFilter)
-				.build();
+        @Transactional
+        public Deployment rollbackToPreviousVersion(long deploymentId) {
+                Deployment curDeployment = deploymentRepository.findById(deploymentId)
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Deployment not found with id: " + deploymentId));
 
-		List<ResourceTagMapping> mappings = taggingApiClient.getResources(resourcesRequest).resourceTagMappingList();
+                Project project = curDeployment.getProject();
 
-		if (mappings.isEmpty()) {
-			throw new RuntimeException("No tagged ECS service found for project: " + projectName);
-		}
-		if (mappings.size() > 1) {
-			log.warn("Multiple tagged ECS services found for project: {}. Using the first one.", projectName);
-		}
+                Deployment lastSuccessfulDeployment = deploymentRepository
+                                .findFirstByProjectAndStatusOrderByIdDesc(project, Deployment.DeploymentStatus.SUCCESS)
+                                .orElseThrow(() -> new RuntimeException(
+                                                "No previous successful deployment found for service: "
+                                                                + project.getEcsServiceName()));
 
-		String arn = mappings.getFirst().resourceARN();
-		// arn:aws:ecs:ap-northeast-2:123456789012:service/dev-cluster/cat-frontend-svc
-		String[] parts = arn.split(":");
-		String[] serviceParts = parts[parts.length - 1].split("/");
+                String rollbackTaskDefinitionArn = lastSuccessfulDeployment.getTaskDefinitionArn();
+                log.info("Rolling back service {} to task definition {}", project.getEcsServiceName(),
+                                rollbackTaskDefinitionArn);
 
-		String clusterName = serviceParts[1];
-		String serviceName = serviceParts[2];
+                ecsClient.updateService(UpdateServiceRequest.builder()
+                                .cluster(project.getEcsClusterName())
+                                .service(project.getEcsServiceName())
+                                .taskDefinition(rollbackTaskDefinitionArn)
+                                .forceNewDeployment(true)
+                                .build());
+                log.info("Rollback requested for service: {}", project.getEcsServiceName());
 
-		project.setEcsClusterName(clusterName);
-		project.setEcsServiceName(serviceName);
-		return projectRepository.save(project);
-	}
+                Deployment rollbackDeployment = new Deployment(project, lastSuccessfulDeployment.getGithubRunId(),
+                                project.getEcsClusterName(), project.getEcsServiceName());
+                rollbackDeployment.setTaskDefinitionArn(rollbackTaskDefinitionArn);
+                rollbackDeployment.setStatus(Deployment.DeploymentStatus.ROLLED_BACK);
+                rollbackDeployment.setPreviousDeployment(lastSuccessfulDeployment);
 
+                return deploymentRepository.save(rollbackDeployment);
+        }
 
-	public List<String> listClusters() {
-		return ecsClient.listClustersPaginator().stream()
-				.flatMap(response -> response.clusterArns().stream())
-				.collect(Collectors.toList());
-	}
+        @Transactional
+        public Project discoverAndSaveEcsInfo(long projectId) {
+                Project project = projectRepository.findById(projectId)
+                                .orElseThrow(() -> new RuntimeException("Project not found with id: " + projectId));
 
+                log.info("Attempting to discover ECS info for project: {}", project.getName());
+                TagFilter tagFilter = TagFilter.builder()
+                                .key("ProjectRepo")
+                                .values(project.getName())
+                                .build();
 
-	public List<String> listServices(long projectId) {
-		Project project = projectRepository.findById(projectId)
-				.orElseThrow(() -> new IllegalArgumentException("Project not found with id: " + projectId));
+                GetResourcesRequest resourcesRequest = GetResourcesRequest.builder()
+                                .resourceTypeFilters("ecs:service")
+                                .tagFilters(tagFilter)
+                                .build();
 
-		if(project.getEcsClusterName().isEmpty()) {
-			throw new IllegalArgumentException("Ecs Cluster name not found, Please synchronization first");
-		}
+                List<ResourceTagMapping> mappings = taggingApiClient.getResources(resourcesRequest)
+                                .resourceTagMappingList();
 
-		ListServicesRequest request = ListServicesRequest.builder().cluster(project.getEcsClusterName()).build();
-		return ecsClient.listServicesPaginator(request).stream()
-				.flatMap(response -> response.serviceArns().stream())
-				.collect(Collectors.toList());
-	}
+                if (mappings.isEmpty()) {
+                        throw new RuntimeException("No tagged ECS service found for project: " + project.getName());
+                }
+                if (mappings.size() > 1) {
+                        log.warn("Multiple tagged ECS services found for project: {}. Using the first one.",
+                                        project.getName());
+                }
+
+                String arn = mappings.getFirst().resourceARN();
+                // arn:aws:ecs:ap-northeast-2:123456789012:service/dev-cluster/cat-frontend-svc
+                String[] parts = arn.split(":");
+                String[] serviceParts = parts[parts.length - 1].split("/");
+
+                String clusterName = serviceParts[1];
+                String serviceName = serviceParts[2];
+
+                project.setEcsClusterName(clusterName);
+                project.setEcsServiceName(serviceName);
+                return projectRepository.save(project);
+        }
+
+        public List<String> listClusters() {
+                return ecsClient.listClustersPaginator().stream()
+                                .flatMap(response -> response.clusterArns().stream())
+                                .collect(Collectors.toList());
+        }
+
+        public List<String> listServices(long projectId) {
+                Project project = projectRepository.findById(projectId)
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                                "Project not found with id: " + projectId));
+
+                if (project.getEcsClusterName().isEmpty()) {
+                        throw new IllegalArgumentException("Ecs Cluster name not found, Please synchronization first");
+                }
+
+                ListServicesRequest request = ListServicesRequest.builder().cluster(project.getEcsClusterName())
+                                .build();
+                return ecsClient.listServicesPaginator(request).stream()
+                                .flatMap(response -> response.serviceArns().stream())
+                                .collect(Collectors.toList());
+        }
 }

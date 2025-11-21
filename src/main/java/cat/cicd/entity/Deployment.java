@@ -1,7 +1,5 @@
 package cat.cicd.entity;
 
-import cat.cicd.entity.vo.DeploymentStep;
-import cat.cicd.global.converter.DeploymentStepConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -16,7 +14,6 @@ import java.util.List;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Deployment {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -25,14 +22,29 @@ public class Deployment {
 	@JoinColumn(name = "project_id", nullable = false)
 	private Project project;
 
-	@Column(nullable = false, unique = true)
+	@Column(unique = true)
 	private String githubRunId;
 
-	@Setter @Column private String commitHash;
-	@Setter @Column private String commitMessage;
-	@Setter @Column private String commitAuthor;
-	@Setter @Column private String commitBranch;
-	@Setter @Column private String imageTag;
+	@Setter
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "previous_deployment_id")
+	private Deployment previousDeployment;
+
+	@Setter
+	@Column
+	private String commitHash;
+	@Setter
+	@Column
+	private String commitMessage;
+	@Setter
+	@Column
+	private String commitAuthor;
+	@Setter
+	@Column
+	private String commitBranch;
+	@Setter
+	@Column
+	private String imageTag;
 
 	@Column(nullable = false)
 	private String targetCluster;
@@ -40,7 +52,8 @@ public class Deployment {
 	@Column(nullable = false)
 	private String targetService;
 
-	@Setter @Column
+	@Setter
+	@Column
 	private String taskDefinitionArn;
 
 	@Setter
@@ -48,20 +61,14 @@ public class Deployment {
 	@Column(nullable = false)
 	private DeploymentStatus status;
 
-	@Setter
-	@Convert(converter = DeploymentStepConverter.class)
-	@Column(columnDefinition = "TEXT")
-	private List<DeploymentStep> steps = new ArrayList<>();
+	@OneToMany(mappedBy = "deployment", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<DeploymentStage> stages = new ArrayList<>();
 
 	@CreationTimestamp
 	private LocalDateTime createdAt;
 
 	@UpdateTimestamp
 	private LocalDateTime updatedAt;
-
-	public enum DeploymentStatus {
-		PENDING, IN_PROGRESS, SUCCESS, FAILED, CANCELLED, ROLLED_BACK
-	}
 
 	@Builder
 	public Deployment(Project project, String githubRunId, String targetCluster, String targetService) {
@@ -72,8 +79,12 @@ public class Deployment {
 		this.status = DeploymentStatus.PENDING;
 	}
 
-	public void updateStep(DeploymentStep newStep) {
-		this.steps.removeIf(step -> step.getName().equals(newStep.getName()));
-		this.steps.add(newStep);
+	public void addStage(DeploymentStage stage) {
+		this.stages.add(stage);
+		stage.setDeployment(this);
+	}
+
+	public enum DeploymentStatus {
+		PENDING, IN_PROGRESS, SUCCESS, FAILED, CANCELLED, ROLLED_BACK
 	}
 }

@@ -12,9 +12,10 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DeploymentStep {
-    private String name;
-    private Long githubJobId;
-    private String status;
-    private LocalDateTime startedAt;
-    private LocalDateTime completedAt;
+	private String name;
+	private Long githubJobId;
+	private String status;
+	private String eventLogs;
+	private LocalDateTime startedAt;
+	private LocalDateTime completedAt;
 }

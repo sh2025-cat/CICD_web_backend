@@ -9,13 +9,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.net.ConnectException;
 import java.time.DateTimeException;
 import java.time.format.DateTimeParseException;
 
 /**
  * @Summary 예외 발생에 대한 처리 클래스
- *
  * @Description 예외 발생에 대한 처리 클래스 추후 AOP 를 이용하여 예외 발생에 대한 처리를 통합할 예정
  */
 @Slf4j
@@ -48,18 +46,6 @@ public class GlobalExceptionHandler {
 				"Failed to parse date: " + errorMessage);
 		return ResponseEntity.badRequest().body(error);
 	}
-
-//	@ExceptionHandler({ NullPointerException.class, ConnectException.class, Exception.class })
-//	public ResponseEntity<ErrorResponse> handleDefaultException(Exception e) {
-//		log.error("Uncaught exception occurred: {}", e.getMessage(), e);
-//
-//		String errorMessage = "Internal Server Error. Please contact the administrator.";
-//
-//		ErrorResponse error = new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-//				HttpStatus.INTERNAL_SERVER_ERROR.value(), errorMessage);
-//
-//		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-//	}
 
 	@ExceptionHandler({ JsonMappingException.class, JsonParseException.class })
 	public ResponseEntity<ErrorResponse> handleParsingException(Exception e) {
