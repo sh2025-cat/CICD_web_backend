@@ -19,7 +19,6 @@ permissions:
 env:
   AWS_REGION: ap-northeast-2
   ECR_REPOSITORY: cat-backend
-  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build:
@@ -63,7 +62,7 @@ jobs:
         run: |
           IMAGE_TAG="${{ github.event.inputs.image_tag }}"
           if [ -z "$IMAGE_TAG" ]; then
-            IMAGE_TAG="${GITHUB_SHA}"
+            IMAGE_TAG="${GITHUB_SHA::7}"
           fi
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
