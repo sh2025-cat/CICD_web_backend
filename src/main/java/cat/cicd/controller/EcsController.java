@@ -2,6 +2,7 @@ package cat.cicd.controller;
 
 import cat.cicd.dto.request.DeployRequest;
 import cat.cicd.dto.response.DeploymentResponse;
+import cat.cicd.dto.response.InfraStructureResponse;
 import cat.cicd.entity.Deployment;
 import cat.cicd.global.common.CommonResponse;
 import cat.cicd.service.ECSService;
@@ -33,21 +34,35 @@ public class EcsController {
 	@Deprecated
 	@Operation(summary = "특정 클러스터의 서비스 목록 조회", description = "지정된 ECS 클러스터의 모든 서비스 ARN 목록을 조회합니다.")
 	@GetMapping("/clusters/{projectId}/services")
-	public ResponseEntity<CommonResponse<List<String>>> listEcsServices(@PathVariable long projectId) {
+	public ResponseEntity<CommonResponse<List<String>>> listEcsServices(
+            @PathVariable long projectId
+    ) {
 		List<String> services = ecsService.listServices(projectId);
 		return ResponseEntity.ok(CommonResponse.of(services));
 	}
 
+    @Operation(summary = "ECS 배포 정보 조회 API", description = "ECS 배포 상태에 대한 데이터를 조회하는 API입니다.")
+    @GetMapping("/clusters/{deploymentId}/detail")
+    public ResponseEntity<CommonResponse<InfraStructureResponse>> getDeploymentDetail(
+            @PathVariable Long deploymentId
+    ) {
+        return ResponseEntity.ok(CommonResponse.of(ecsService.getInfraStructure(deploymentId)));
+    }
+
 	@Operation(summary = "ECS 신규 버전 배포", description = "지정된 태그의 새 이미지로 ECS 서비스를 배포합니다.")
 	@PostMapping("/deploy")
-	public ResponseEntity<CommonResponse<DeploymentResponse>> deploy(@Valid @RequestBody DeployRequest request) {
-		Deployment deployment = ecsService.deployNewVersion(request.projectId(), request.imageTag());
+	public ResponseEntity<CommonResponse<DeploymentResponse>> deploy(
+            @Valid @RequestBody DeployRequest request
+    ) {
+		Deployment deployment = ecsService.deployNewVersion(request.deploymentId(), request.imageTag());
 		return ResponseEntity.ok(CommonResponse.of(DeploymentResponse.from(deployment)));
 	}
 
 	@Operation(summary = "ECS 이전 버전 롤백", description = "ECS 서비스를 가장 마지막으로 성공한 버전으로 롤백합니다.")
 	@PostMapping("/rollback/{deploymentId}")
-	public ResponseEntity<CommonResponse<DeploymentResponse>> rollback(@PathVariable long deploymentId) {
+	public ResponseEntity<CommonResponse<DeploymentResponse>> rollback(
+            @PathVariable long deploymentId
+    ) {
 		Deployment rollbackDeployment = ecsService.rollbackToPreviousVersion(deploymentId);
 		return ResponseEntity.ok(CommonResponse.of(DeploymentResponse.from(rollbackDeployment)));
 	}

@@ -12,6 +12,8 @@ import java.util.List;
 @Entity
 @Table(name = "tb_deployments")
 @Getter
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Deployment {
 	@Id
@@ -52,9 +54,11 @@ public class Deployment {
     @Column
     private String pipelineStatus;
 
+    @Setter
 	@Column(nullable = false)
 	private String targetCluster;
 
+    @Setter
 	@Column(nullable = false)
 	private String targetService;
 

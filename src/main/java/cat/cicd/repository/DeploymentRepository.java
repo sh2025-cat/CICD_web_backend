@@ -2,6 +2,7 @@ package cat.cicd.repository;
 
 import cat.cicd.entity.Deployment;
 import cat.cicd.entity.Project;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -17,4 +18,8 @@ public interface DeploymentRepository extends JpaRepository<Deployment, Long> {
 	Deployment findTopByProjectOrderByCreatedAtDesc(Project project);
 
 	List<Deployment> findAllByProjectIdOrderByCreatedAtDesc(Long projectId);
+
+    List<Deployment> findByProjectAndStatusOrderByCreatedAtDesc(Project project, Deployment.DeploymentStatus status, Pageable pageable);
+
+    List<Deployment> findAllByStatus(Deployment.DeploymentStatus status);
 }

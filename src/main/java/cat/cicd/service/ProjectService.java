@@ -4,6 +4,7 @@ import cat.cicd.dto.request.ProjectRequest;
 import cat.cicd.dto.response.DeploymentHistoryResponse;
 import cat.cicd.dto.response.RepoDeployStatusResponse;
 import cat.cicd.entity.Deployment;
+import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.repository.ProjectRepository;
 import org.springframework.stereotype.Service;
 
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Service;
 public class ProjectService {
 
 	private final ProjectRepository projectRepository;
-	private final cat.cicd.repository.DeploymentRepository deploymentRepository;
+	private final DeploymentRepository deploymentRepository;
 
 	public ProjectService(ProjectRepository projectRepository,
 			cat.cicd.repository.DeploymentRepository deploymentRepository) {

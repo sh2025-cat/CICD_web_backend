@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.zip.CheckedOutputStream;
 
 @Slf4j
 @Service
@@ -172,7 +173,9 @@ public class GithubActionService {
             String headBranch = (String) run.get("head_branch");
 
             if (headCommit != null) {
-                deployment.setCommitHash((String) headCommit.get("id"));
+                String commitHash = (String) headCommit.get("id");
+                deployment.setCommitHash(commitHash);
+                deployment.setImageTag(commitHash.substring(0, 7));
                 deployment.setCommitMessage((String) headCommit.get("message"));
 
                 Map<String, Object> author = (Map<String, Object>) headCommit.get("author");

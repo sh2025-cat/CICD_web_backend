@@ -31,10 +31,6 @@ public class Project {
 	@Column
 	private String ecsServiceName;
 
-	@Setter
-	@Column
-	private String containerName;
-
 	public Project(String owner, String name, String githubRepoUrl) {
 		this.owner = owner;
 		this.name = name;
