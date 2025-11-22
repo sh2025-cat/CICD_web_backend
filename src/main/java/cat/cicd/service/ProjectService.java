@@ -3,26 +3,36 @@ package cat.cicd.service;
 import cat.cicd.dto.request.NextStepRequest;
 import cat.cicd.dto.request.ProjectRequest;
 import cat.cicd.dto.response.DeploymentHistoryResponse;
+import cat.cicd.dto.response.DeploymentDetailResponse;
+import cat.cicd.dto.response.MetricResponse;
 import cat.cicd.dto.response.RepoDeployStatusResponse;
 import cat.cicd.entity.Deployment;
+import cat.cicd.global.common.CommonResponse;
 import cat.cicd.global.enums.ProgressStatus;
 import cat.cicd.global.enums.Step;
 import cat.cicd.repository.DeploymentRepository;
+import cat.cicd.repository.MetricRepository;
 import cat.cicd.repository.ProjectRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ProjectService {
 
 	private final ProjectRepository projectRepository;
 	private final DeploymentRepository deploymentRepository;
+    private final MetricRepository metricRepository;
 
-	public ProjectService(ProjectRepository projectRepository,
-			cat.cicd.repository.DeploymentRepository deploymentRepository) {
+    public ProjectService(ProjectRepository projectRepository,
+                          cat.cicd.repository.DeploymentRepository deploymentRepository, MetricRepository metricRepository) {
 		this.projectRepository = projectRepository;
 		this.deploymentRepository = deploymentRepository;
-	}
+        this.metricRepository = metricRepository;
+    }
 
 	public void createProject(ProjectRequest projectRequest) {
 		projectRepository.save(projectRequest.toEntity());
@@ -80,5 +90,19 @@ public class ProjectService {
 
         deployment.setLastStep(Step.valueOf(request.step()));
         deploymentRepository.save(deployment);
+    }
+
+    public CommonResponse<List<MetricResponse>> getMetrics(long deploymentId) {
+        Deployment deployment = deploymentRepository.findById(deploymentId)
+                .orElseThrow(() -> new IllegalArgumentException("Deployment not found with id: " + deploymentId));
+
+        List<MetricResponse> metrics = metricRepository.findTop5ByProjectOrderByRecordedAtDesc(deployment.getProject()).stream()
+                .map(metric -> new MetricResponse(
+                        metric.getCpuUsage(),
+                        metric.getMemoryUsage(),
+                        metric.getRecordedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                ))
+                .collect(Collectors.toList());
+        return CommonResponse.of(metrics);
     }
 }

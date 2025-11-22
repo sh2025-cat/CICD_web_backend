@@ -2,10 +2,7 @@ package cat.cicd.controller;
 
 import cat.cicd.dto.request.NextStepRequest;
 import cat.cicd.dto.request.ProjectRequest;
-import cat.cicd.dto.response.DeploymentDetailResponse;
-import cat.cicd.dto.response.DeploymentHistoryResponse;
-import cat.cicd.dto.response.ProjectResponse;
-import cat.cicd.dto.response.RepoDeployStatusResponse;
+import cat.cicd.dto.response.*;
 import cat.cicd.entity.Project;
 import cat.cicd.global.common.CommonResponse;
 import cat.cicd.service.ECSService;
@@ -79,5 +76,12 @@ public class ProjectController {
     ) {
         projectService.postNextStep(deploymentId, request);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/metrics/{deploymentId}")
+    public ResponseEntity<CommonResponse<List<MetricResponse>>> getMetrics(
+            @PathVariable long deploymentId
+    ) {
+        return ResponseEntity.ok(projectService.getMetrics(deploymentId));
     }
 }
