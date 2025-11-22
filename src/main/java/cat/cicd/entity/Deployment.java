@@ -56,6 +56,10 @@ public class Deployment {
     @Column
     @Builder.Default
     private ProgressStatus pipelineStatus = ProgressStatus.PENDING;
+    @Setter
+    @Column
+    @Builder.Default
+    private ProgressStatus deployStatus = ProgressStatus.PENDING;
 
     @Setter
 	@Column(nullable = false)

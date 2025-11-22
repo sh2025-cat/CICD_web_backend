@@ -123,7 +123,7 @@ public class MonitoringService {
         Deployment deployment = deploymentRepository.findById(deploymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Deployment not found"));
 
-        if (deployment.getPipelineStatus() != ProgressStatus.IN_PROGRESS) return;
+        if (deployment.getDeployStatus() != ProgressStatus.IN_PROGRESS) return;
 
 //        if (deployment.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(20))) {
 //            log.error("Deployment {} timed out.", deploymentId);
@@ -158,6 +158,7 @@ public class MonitoringService {
     }
 
     private void completeDeployment(Deployment deployment) {
+        deployment.setDeployStatus(ProgressStatus.SUCCESS);
         deployment.getStages().stream()
                 .filter(stage -> "deploy".equalsIgnoreCase(stage.getName())
                         && stage.getStatus() == ProgressStatus.IN_PROGRESS)
@@ -169,6 +170,7 @@ public class MonitoringService {
     }
 
     private void failDeployment(Deployment deployment, String reason) {
+        deployment.setDeployStatus(ProgressStatus.FAILED);
         deployment.getStages().stream()
                 .filter(stage -> "deploy".equalsIgnoreCase(stage.getName())
                         && stage.getStatus() == ProgressStatus.IN_PROGRESS)

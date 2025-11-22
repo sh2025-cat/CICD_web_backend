@@ -20,7 +20,7 @@ public class DeploymentMonitorScheduler {
 
     @Scheduled(fixedDelay = 10000)
     public void pollDeploymentStatus() {
-        List<Deployment> ongoingDeployments = deploymentRepository.findAllByPipelineStatus(ProgressStatus.IN_PROGRESS);
+        List<Deployment> ongoingDeployments = deploymentRepository.findAllByDeployStatus(ProgressStatus.IN_PROGRESS);
 
         for (Deployment deployment : ongoingDeployments) {
             try {

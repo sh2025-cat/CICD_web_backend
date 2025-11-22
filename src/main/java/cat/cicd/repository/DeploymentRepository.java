@@ -29,4 +29,6 @@ public interface DeploymentRepository extends JpaRepository<Deployment, Long> {
 
     @EntityGraph(attributePaths = {"stages"})
     List<Deployment> findAllByPipelineStatus(ProgressStatus status);
+
+    List<Deployment> findAllByDeployStatus(ProgressStatus deployStatus);
 }
