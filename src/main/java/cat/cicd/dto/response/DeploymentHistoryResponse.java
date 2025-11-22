@@ -14,7 +14,7 @@ import java.util.List;
 @Builder
 public class DeploymentHistoryResponse {
 	private Long deploymentId;
-    private Step lastStep;
+    private String lastStep;
     private ProgressStatus pipelineStatus;
 	private CommitInfo commit;
 	private Timings timings;
@@ -54,7 +54,7 @@ public class DeploymentHistoryResponse {
 
 		return DeploymentHistoryResponse.builder()
                 .deploymentId(deployment.getId())
-                .lastStep(deployment.getLastStep())
+                .lastStep(deployment.getLastStep().getValue())
                 .pipelineStatus(deployment.getPipelineStatus())
                 .commit(commitInfo)
                 .timings(timings)
