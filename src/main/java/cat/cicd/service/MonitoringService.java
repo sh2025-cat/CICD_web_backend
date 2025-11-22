@@ -158,7 +158,6 @@ public class MonitoringService {
     }
 
     private void completeDeployment(Deployment deployment) {
-        deployment.setPipelineStatus(ProgressStatus.SUCCESS);
         deployment.getStages().stream()
                 .filter(stage -> "deploy".equalsIgnoreCase(stage.getName())
                         && stage.getStatus() == ProgressStatus.IN_PROGRESS)
@@ -170,7 +169,6 @@ public class MonitoringService {
     }
 
     private void failDeployment(Deployment deployment, String reason) {
-        deployment.setPipelineStatus(ProgressStatus.FAILED);
         deployment.getStages().stream()
                 .filter(stage -> "deploy".equalsIgnoreCase(stage.getName())
                         && stage.getStatus() == ProgressStatus.IN_PROGRESS)
