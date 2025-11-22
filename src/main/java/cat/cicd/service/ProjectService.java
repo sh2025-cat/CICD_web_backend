@@ -88,7 +88,7 @@ public class ProjectService {
         Deployment deployment = deploymentRepository.findById(deploymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Deployment not found with id: " + deploymentId));
 
-        deployment.setLastStep(Step.valueOf(request.step()));
+        deployment.setLastStep(Step.from(request.step()));
         deploymentRepository.save(deployment);
     }
 
