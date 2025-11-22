@@ -25,3 +25,4 @@ springdoc:
 
 github:
   access-token: ${GITHUB_TOKEN}
+  webhook-secret: ${GITHUB_WEBHOOK_SECRET}

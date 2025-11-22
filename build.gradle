@@ -60,6 +60,8 @@ dependencies {
 
     // GitHub
     implementation 'org.kohsuke:github-api:1.315'
+
+    implementation 'commons-codec:commons-codec:1.16.0'
 }
 
 tasks.named('test') {
