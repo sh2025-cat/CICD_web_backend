@@ -2,7 +2,6 @@ package cat.cicd.dto.response;
 
 import cat.cicd.entity.Deployment;
 import cat.cicd.entity.DeploymentStage;
-import cat.cicd.global.enums.DeploymentStatus;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -16,7 +15,6 @@ import java.util.stream.Collectors;
 public class DeploymentDetailResponse {
 
 	private Long id;
-	private DeploymentStatus status;
 	private String githubRunId;
 	private String githubRunUrl;
 
@@ -28,7 +26,6 @@ public class DeploymentDetailResponse {
 	public static DeploymentDetailResponse from(Deployment deployment) {
 		return DeploymentDetailResponse.builder()
                 .id(deployment.getId())
-                .status(deployment.getDeployStatus())
 				.githubRunId(deployment.getGithubRunId())
 				.githubRunUrl("https://github.com/" + deployment.getProject().getOwner() + "/" + deployment.getProject().getName() + "/actions/runs/" + deployment.getGithubRunId())
 				.timings(TimeInfo.builder()

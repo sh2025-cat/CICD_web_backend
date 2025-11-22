@@ -4,7 +4,7 @@ import cat.cicd.entity.Deployment;
 import cat.cicd.entity.DeploymentStage;
 import cat.cicd.entity.Project;
 import cat.cicd.entity.ProjectMetric;
-import cat.cicd.global.enums.DeploymentStatus;
+import cat.cicd.global.enums.ProgressStatus;
 import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.repository.MetricRepository;
 import cat.cicd.repository.ProjectRepository;
@@ -123,7 +123,7 @@ public class MonitoringService {
         Deployment deployment = deploymentRepository.findById(deploymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Deployment not found"));
 
-        if (deployment.getDeployStatus() != DeploymentStatus.IN_PROGRESS) return;
+        if (deployment.getPipelineStatus() != ProgressStatus.IN_PROGRESS) return;
 
 //        if (deployment.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(20))) {
 //            log.error("Deployment {} timed out.", deploymentId);
@@ -158,11 +158,10 @@ public class MonitoringService {
     }
 
     private void completeDeployment(Deployment deployment) {
-        deployment.setDeployStatus(DeploymentStatus.SUCCESS);
-        deployment.setPipelineStatus(DeploymentStatus.SUCCESS);
+        deployment.setPipelineStatus(ProgressStatus.SUCCESS);
         deployment.getStages().stream()
                 .filter(stage -> "deploy".equalsIgnoreCase(stage.getName())
-                        && stage.getStatus() == DeploymentStage.StageStatus.IN_PROGRESS)
+                        && stage.getStatus() == ProgressStatus.IN_PROGRESS)
                 .findFirst()
                 .ifPresent(DeploymentStage::complete);
         deploymentRepository.save(deployment);
@@ -171,11 +170,10 @@ public class MonitoringService {
     }
 
     private void failDeployment(Deployment deployment, String reason) {
-        deployment.setDeployStatus(DeploymentStatus.FAILED);
-        deployment.setPipelineStatus(DeploymentStatus.FAILED);
+        deployment.setPipelineStatus(ProgressStatus.FAILED);
         deployment.getStages().stream()
                 .filter(stage -> "deploy".equalsIgnoreCase(stage.getName())
-                        && stage.getStatus() == DeploymentStage.StageStatus.IN_PROGRESS)
+                        && stage.getStatus() == ProgressStatus.IN_PROGRESS)
                 .findFirst()
                 .ifPresent(DeploymentStage::fail);
         deploymentRepository.save(deployment);

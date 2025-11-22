@@ -1,7 +1,8 @@
 package cat.cicd.dto.response;
 
 import cat.cicd.entity.Deployment;
-import cat.cicd.global.enums.DeploymentStatus;
+import cat.cicd.global.enums.ProgressStatus;
+import cat.cicd.global.enums.Step;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -13,9 +14,8 @@ import java.util.List;
 @Builder
 public class DeploymentHistoryResponse {
 	private Long deploymentId;
-	private DeploymentStatus status;
-    private String lastStep;
-    private String pipelineStatus;
+    private Step lastStep;
+    private ProgressStatus pipelineStatus;
 	private CommitInfo commit;
 	private Timings timings;
 	private List<StageInfo> stages;
@@ -54,9 +54,8 @@ public class DeploymentHistoryResponse {
 
 		return DeploymentHistoryResponse.builder()
                 .deploymentId(deployment.getId())
-				.status(deployment.getDeployStatus())
-                .lastStep(deployment.getLastStep().name())
-                .pipelineStatus(deployment.getPipelineStatus().name())
+                .lastStep(deployment.getLastStep())
+                .pipelineStatus(deployment.getPipelineStatus())
                 .commit(commitInfo)
                 .timings(timings)
                 .stages(stages)

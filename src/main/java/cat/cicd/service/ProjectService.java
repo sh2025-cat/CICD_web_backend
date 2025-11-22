@@ -5,7 +5,7 @@ import cat.cicd.dto.request.ProjectRequest;
 import cat.cicd.dto.response.DeploymentHistoryResponse;
 import cat.cicd.dto.response.RepoDeployStatusResponse;
 import cat.cicd.entity.Deployment;
-import cat.cicd.global.enums.DeploymentStatus;
+import cat.cicd.global.enums.ProgressStatus;
 import cat.cicd.global.enums.Step;
 import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.repository.ProjectRepository;
@@ -38,7 +38,7 @@ public class ProjectService {
 								project.getId(),
 								project.getName(),
 								latestDeployment.getImageTag(),
-                                latestDeployment.isCiCheck(),
+                                latestDeployment.getPipelineStatus(),
 								latestDeployment.getCommitHash().substring(0, 7),
 								latestDeployment.getCommitMessage(),
 								latestDeployment.getCreatedAt());
@@ -47,7 +47,7 @@ public class ProjectService {
 								project.getId(),
 								project.getName(),
                                 null,
-                                false,
+                                ProgressStatus.PENDING,
                                 null,
                                 null,
                                 null);
@@ -68,7 +68,7 @@ public class ProjectService {
 		Deployment deployment = deploymentRepository.findById(deploymentId)
 				.orElseThrow(() -> new IllegalArgumentException("Deployment not found with id: " + deploymentId));
 
-        deployment.setPipelineStatus(DeploymentStatus.IN_PROGRESS);
+        deployment.setPipelineStatus(ProgressStatus.IN_PROGRESS);
 		return cat.cicd.dto.response.DeploymentDetailResponse.from(deployment);
 	}
 

@@ -1,5 +1,6 @@
 package cat.cicd.entity;
 
+import cat.cicd.global.enums.ProgressStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -24,7 +25,7 @@ public class DeploymentStage {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	@Setter
-	private StageStatus status;
+	private ProgressStatus status;
 
 	private Long githubJobId;
 
@@ -41,16 +42,12 @@ public class DeploymentStage {
 	private Deployment deployment;
 
 	public void complete() {
-		this.status = StageStatus.SUCCESS;
+		this.status = ProgressStatus.SUCCESS;
 		this.completedAt = LocalDateTime.now();
 	}
 
 	public void fail() {
-		this.status = StageStatus.FAILED;
+		this.status = ProgressStatus.FAILED;
 		this.completedAt = LocalDateTime.now();
-	}
-
-	public enum StageStatus {
-		PENDING, IN_PROGRESS, SUCCESS, FAILED, SKIPPED
 	}
 }

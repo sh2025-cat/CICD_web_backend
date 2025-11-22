@@ -3,7 +3,7 @@ package cat.cicd.service;
 import cat.cicd.entity.Deployment;
 import cat.cicd.entity.DeploymentStage;
 import cat.cicd.entity.Project;
-import cat.cicd.global.enums.DeploymentStatus;
+import cat.cicd.global.enums.ProgressStatus;
 import cat.cicd.global.enums.Step;
 import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.repository.ProjectRepository;
@@ -98,7 +98,7 @@ public class GithubActionService {
                     DeploymentStage newStage = DeploymentStage.builder()
                             .name(jobName)
                             .githubJobId(jobId)
-                            .status(DeploymentStage.StageStatus.PENDING)
+                            .status(ProgressStatus.PENDING)
                             .build();
                     deployment.addStage(newStage);
                     return newStage;
@@ -110,13 +110,13 @@ public class GithubActionService {
             } else if ("failure".equalsIgnoreCase(conclusion) || "cancelled".equalsIgnoreCase(conclusion)) {
                 stage.fail();
             } else {
-                stage.setStatus(DeploymentStage.StageStatus.IN_PROGRESS);
+                stage.setStatus(ProgressStatus.IN_PROGRESS);
             }
         } else {
             if ("in_progress".equalsIgnoreCase(status)) {
-                stage.setStatus(DeploymentStage.StageStatus.IN_PROGRESS);
+                stage.setStatus(ProgressStatus.IN_PROGRESS);
             } else if ("queued".equalsIgnoreCase(status)) {
-                stage.setStatus(DeploymentStage.StageStatus.PENDING);
+                stage.setStatus(ProgressStatus.PENDING);
             }
         }
 
@@ -187,7 +187,7 @@ public class GithubActionService {
             deployment.setCommitBranch(headBranch);
 
             if ("success".equals(conclusion)) {
-                deployment.setPipelineStatus(DeploymentStatus.PENDING);
+                deployment.setPipelineStatus(ProgressStatus.PENDING);
                 deployment.setLastStep(Step.TEST);
                 deployment.setCiCheck(true);
             } else {

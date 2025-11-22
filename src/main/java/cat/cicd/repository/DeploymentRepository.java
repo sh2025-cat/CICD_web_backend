@@ -2,7 +2,7 @@ package cat.cicd.repository;
 
 import cat.cicd.entity.Deployment;
 import cat.cicd.entity.Project;
-import cat.cicd.global.enums.DeploymentStatus;
+import cat.cicd.global.enums.ProgressStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @Repository
 public interface DeploymentRepository extends JpaRepository<Deployment, Long> {
-	Optional<Deployment> findFirstByProjectAndDeployStatusEqualsOrderByIdDesc(Project project, DeploymentStatus deploymentStatus);
+	Optional<Deployment> findFirstByProjectAndPipelineStatusEqualsOrderByIdDesc(Project project, ProgressStatus progressStatus);
 
 	Optional<Deployment> findByGithubRunId(String githubRunId);
 
@@ -20,7 +20,7 @@ public interface DeploymentRepository extends JpaRepository<Deployment, Long> {
 
 	List<Deployment> findAllByProjectIdAndCiCheckEqualsOrderByCreatedAtDesc(Long projectId, boolean ciCheck);
 
-    List<Deployment> findByProjectAndDeployStatusEqualsOrderByCreatedAtDesc(Project project, DeploymentStatus deploymentStatus, Pageable pageable);
+    List<Deployment> findByProjectAndPipelineStatusEqualsOrderByCreatedAtDesc(Project project, ProgressStatus progressStatus, Pageable pageable);
 
-    List<Deployment> findAllByDeployStatus(DeploymentStatus status);
+    List<Deployment> findAllByPipelineStatus(ProgressStatus status);
 }

@@ -1,6 +1,6 @@
 package cat.cicd.entity;
 
-import cat.cicd.global.enums.DeploymentStatus;
+import cat.cicd.global.enums.ProgressStatus;
 import cat.cicd.global.enums.Step;
 import jakarta.persistence.*;
 import lombok.*;
@@ -55,7 +55,7 @@ public class Deployment {
     @Setter
     @Column
     @Builder.Default
-    private DeploymentStatus pipelineStatus = DeploymentStatus.PENDING;
+    private ProgressStatus pipelineStatus = ProgressStatus.PENDING;
 
     @Setter
 	@Column(nullable = false)
@@ -68,11 +68,6 @@ public class Deployment {
 	@Setter
 	@Column
 	private String taskDefinitionArn;
-
-	@Setter
-    @Enumerated(EnumType.STRING)
-	@Column(nullable = false)
-	private DeploymentStatus deployStatus;
 
     @Setter
     @Column
@@ -94,7 +89,7 @@ public class Deployment {
 		this.targetCluster = targetCluster;
 		this.targetService = targetService;
 		this.ciCheck = false;
-        this.deployStatus = DeploymentStatus.PENDING;
+        this.pipelineStatus = ProgressStatus.PENDING;
 	}
 
 	public void addStage(DeploymentStage stage) {
