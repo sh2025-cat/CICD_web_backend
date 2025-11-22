@@ -6,6 +6,7 @@ import cat.cicd.dto.response.DeploymentHistoryResponse;
 import cat.cicd.dto.response.RepoDeployStatusResponse;
 import cat.cicd.entity.Deployment;
 import cat.cicd.global.enums.DeploymentStatus;
+import cat.cicd.global.enums.Step;
 import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.repository.ProjectRepository;
 import org.springframework.stereotype.Service;
@@ -75,7 +76,7 @@ public class ProjectService {
         Deployment deployment = deploymentRepository.findById(deploymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Deployment not found with id: " + deploymentId));
 
-        deployment.setLastStep(request.step());
+        deployment.setLastStep(Step.valueOf(request.step()));
         deploymentRepository.save(deployment);
     }
 }

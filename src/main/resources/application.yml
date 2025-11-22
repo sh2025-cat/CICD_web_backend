@@ -1,6 +1,4 @@
 spring:
-  application:
-    name: demo
   jpa:
     show-sql: true
     generate-ddl: true
@@ -27,7 +25,3 @@ springdoc:
 
 github:
   access-token: ${GITHUB_TOKEN}
-
-aws:
-  ecr:
-    repository-uri-prefix: ${ECR_REPOSITORY_URI}

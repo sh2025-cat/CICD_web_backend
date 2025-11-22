@@ -8,7 +8,6 @@ import cat.cicd.dto.response.ProjectResponse;
 import cat.cicd.dto.response.RepoDeployStatusResponse;
 import cat.cicd.entity.Project;
 import cat.cicd.global.common.CommonResponse;
-import cat.cicd.global.enums.Step;
 import cat.cicd.service.ECSService;
 import cat.cicd.service.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
