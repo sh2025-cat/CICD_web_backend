@@ -22,6 +22,9 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -67,7 +70,10 @@ public class GithubActionService {
         String jobName = (String) job.get("name");
         String status = (String) job.get("status");
         String conclusion = (String) job.get("conclusion");
-        LocalDateTime startedAt = (LocalDateTime) job.get("started_at");
+        String startedAt = (String) job.get("started_at");
+        ZonedDateTime utcTime = ZonedDateTime.parse(startedAt);
+        ZonedDateTime kstTime = utcTime.withZoneSameInstant(ZoneId.of("Asia/Seoul"));
+        LocalDateTime startedAtLocal = kstTime.toLocalDateTime();
 
         Project project = projectRepository.findByOwnerAndName(ownerName, repoName)
                 .orElseGet(() -> projectRepository.save(
@@ -100,7 +106,7 @@ public class GithubActionService {
                             .name(jobName)
                             .githubJobId(jobId)
                             .status(ProgressStatus.PENDING)
-                            .startedAt(startedAt)
+                            .startedAt(startedAtLocal)
                             .build();
                     deployment.addStage(newStage);
                     return newStage;

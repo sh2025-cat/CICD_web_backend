@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
+@RequestMapping("/api/ci-webhook")
 public class WebhookController {
 
     @Value("${github.webhook-secret}")
@@ -25,7 +26,7 @@ public class WebhookController {
         this.githubActionService = githubActionService;
     }
 
-    @PostMapping("/webhook")
+    @PostMapping
     public ResponseEntity<Void> handleGithubWebhook(
             @RequestHeader(value = "X-GitHub-Event", defaultValue = "unknown") String eventType,
             @RequestHeader(value = "X-Hub-Signature-256") String signature,
