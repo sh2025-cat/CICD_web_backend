@@ -6,7 +6,6 @@ import cat.cicd.dto.response.DeploymentHistoryResponse;
 import cat.cicd.dto.response.RepoDeployStatusResponse;
 import cat.cicd.entity.Deployment;
 import cat.cicd.global.enums.DeploymentStatus;
-import cat.cicd.global.enums.Step;
 import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.repository.ProjectRepository;
 import org.springframework.stereotype.Service;
@@ -37,8 +36,8 @@ public class ProjectService {
 						return RepoDeployStatusResponse.of(
 								project.getId(),
 								project.getName(),
-                                latestDeployment.getStatus().name(),
 								latestDeployment.getImageTag(),
+                                latestDeployment.isCiCheck(),
 								latestDeployment.getCommitHash().substring(0, 7),
 								latestDeployment.getCommitMessage(),
 								latestDeployment.getCreatedAt());
@@ -47,7 +46,7 @@ public class ProjectService {
 								project.getId(),
 								project.getName(),
                                 null,
-                                DeploymentStatus.PENDING.name(),
+                                false,
                                 null,
                                 null,
                                 null);
@@ -58,7 +57,7 @@ public class ProjectService {
 
     @Transactional
 	public java.util.List<DeploymentHistoryResponse> getDeploymentHistory(Long projectId) {
-		return deploymentRepository.findAllByProjectIdOrderByCreatedAtDesc(projectId).stream()
+		return deploymentRepository.findAllByProjectIdAndCiCheckEqualsOrderByCreatedAtDesc(projectId, true).stream()
 				.map(DeploymentHistoryResponse::from)
 				.toList();
 	}

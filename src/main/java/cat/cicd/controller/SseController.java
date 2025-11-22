@@ -1,6 +1,5 @@
 package cat.cicd.controller;
 
-import cat.cicd.dto.request.GitHubBaseRequest;
 import cat.cicd.service.GithubActionService;
 import cat.cicd.service.SseService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,12 +35,14 @@ public class SseController {
 					event:log
 					data:\uFEFF2025-11-17T08:40:48.0337571Z Current runner version: '2.329.0'
 					"""))) })
-	@GetMapping(value = "/jobs/{jobId}/logs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-	public SseEmitter streamJobLogs(@ModelAttribute GitHubBaseRequest req, @PathVariable long jobId) {
+	@GetMapping(value = "/jobs/{deploymentId}/{jobId}/logs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+	public SseEmitter streamJobLogs(
+            @PathVariable long deploymentId,
+            @PathVariable long jobId) {
 
 		SseEmitter emitter = new SseEmitter(5 * 60 * 1000L);
 
-		githubActionService.streamLogsToEmitter(emitter, req.owner(), req.repo(), jobId);
+		githubActionService.streamLogsToEmitter(emitter, deploymentId, jobId);
 
 		return emitter;
 	}

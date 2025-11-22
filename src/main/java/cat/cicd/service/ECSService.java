@@ -59,7 +59,7 @@ public class ECSService {
                 .targetCluster(deployment.getTargetCluster())
                 .targetService(deployment.getTargetService())
                 .imageTag(imageTag)
-                .status(DeploymentStatus.PENDING)
+                .deployStatus(DeploymentStatus.PENDING)
                 .build();
 
         newDeployment = deploymentRepository.save(newDeployment);
@@ -126,30 +126,18 @@ public class ECSService {
                 .build());
         log.info("Update service requested for: {}", project.getEcsServiceName());
 
-        Optional<Deployment> previousSuccessfulDeployment = deploymentRepository
-                .findFirstByProjectAndStatusOrderByIdDesc(project, DeploymentStatus.SUCCESS);
-
-        deployment.setTargetCluster(project.getEcsClusterName());
-        deployment.setTargetService(project.getEcsServiceName());
-        deployment.setTaskDefinitionArn(newTaskDefinitionArn);
-        deployment.setStatus(DeploymentStatus.IN_PROGRESS);
-
-        Optional<Deployment> lastSuccess = deploymentRepository
-                .findFirstByProjectAndStatusOrderByIdDesc(project, DeploymentStatus.SUCCESS);
+        Optional<Deployment> lastSuccess = deploymentRepository.findFirstByProjectAndDeployStatusEqualsOrderByIdDesc(project, DeploymentStatus.SUCCESS);
         lastSuccess.ifPresent(deployment::setPreviousDeployment);
 
         deployment.setTargetCluster(project.getEcsClusterName());
         deployment.setTargetService(project.getEcsServiceName());
         deployment.setTaskDefinitionArn(newTaskDefinitionArn);
-        deployment.setStatus(DeploymentStatus.IN_PROGRESS);
 
         DeploymentStage deploymentStage = DeploymentStage.builder()
                 .name("deploy")
                 .status(DeploymentStage.StageStatus.IN_PROGRESS)
                 .build();
         deployment.addStage(deploymentStage);
-
-        previousSuccessfulDeployment.ifPresent(deployment::setPreviousDeployment);
 
         return deploymentRepository.save(deployment);
     }
@@ -161,7 +149,7 @@ public class ECSService {
 
         Project project = currentDeployment.getProject();
 
-        List<Deployment> recentSuccesses = deploymentRepository.findByProjectAndStatusOrderByCreatedAtDesc(
+        List<Deployment> recentSuccesses = deploymentRepository.findByProjectAndDeployStatusEqualsOrderByCreatedAtDesc(
                 project,
                 DeploymentStatus.SUCCESS,
                 PageRequest.of(0, 2)
@@ -173,7 +161,7 @@ public class ECSService {
             throw new RuntimeException("롤백할 수 있는 이전 성공 배포가 없습니다.");
         }
 
-        if (currentDeployment.getStatus() == DeploymentStatus.SUCCESS) {
+        if (currentDeployment.getDeployStatus() == DeploymentStatus.SUCCESS) {
             if (recentSuccesses.size() < 2) {
                 throw new RuntimeException("이전 버전의 배포 이력이 없습니다.");
             }
@@ -197,7 +185,7 @@ public class ECSService {
                 .taskDefinitionArn(rollbackTaskDefinitionArn)
                 .targetCluster(project.getEcsClusterName())
                 .targetService(project.getEcsServiceName())
-                .status(DeploymentStatus.SUCCESS)
+                .deployStatus(stableDeployment.getDeployStatus())
                 .build();
 
         return deploymentRepository.save(rollbackRecord);

@@ -17,7 +17,7 @@ public class SseService {
     private final Map<String, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
     public SseEmitter subscribe(String projectName) {
-        SseEmitter emitter = new SseEmitter(60 * 1000L * 60); // 예: 60분
+        SseEmitter emitter = new SseEmitter(60 * 1000L * 60);
 
         emitters.computeIfAbsent(projectName, k -> new CopyOnWriteArrayList<>()).add(emitter);
 

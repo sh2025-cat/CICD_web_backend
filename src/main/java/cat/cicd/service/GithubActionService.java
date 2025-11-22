@@ -25,7 +25,6 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.zip.CheckedOutputStream;
 
 @Slf4j
 @Service
@@ -130,9 +129,9 @@ public class GithubActionService {
         }
 
         if ("failure".equalsIgnoreCase(conclusion)) {
-            deployment.setStatus(DeploymentStatus.FAILED);
+            deployment.setCiCheck(false);
         } else if ("success".equalsIgnoreCase(conclusion) && jobName.toLowerCase().contains("build")) {
-            deployment.setStatus(DeploymentStatus.SUCCESS);
+            deployment.setCiCheck(true);
         }
 
         deploymentRepository.save(deployment);
@@ -190,9 +189,9 @@ public class GithubActionService {
             if ("success".equals(conclusion)) {
                 deployment.setPipelineStatus(DeploymentStatus.PENDING);
                 deployment.setLastStep(Step.TEST);
-                deployment.setStatus(DeploymentStatus.SUCCESS);
+                deployment.setCiCheck(true);
             } else {
-                deployment.setStatus(DeploymentStatus.FAILED);
+                deployment.setCiCheck(false);
             }
 
             Deployment savedDeployment = deploymentRepository.save(deployment);
@@ -293,10 +292,15 @@ public class GithubActionService {
 				.toBodilessEntity();
 	}
 
-	public void streamLogsToEmitter(SseEmitter emitter, String owner, String repo, long jobId) {
+    @Transactional
+	public void streamLogsToEmitter(SseEmitter emitter, long deploymentId, long jobId) {
+        Deployment deployment = deploymentRepository.findById(deploymentId).orElseThrow(() -> new IllegalArgumentException("Deployment not found"));
+
+        Project project = deployment.getProject();
+
 		executor.execute(() -> {
 			try {
-				URI rawLocation = getLogDownloadUrl(owner, repo, jobId);
+				URI rawLocation = getLogDownloadUrl(project.getOwner(), project.getName(), jobId);
 
 				RestClient.create()
 						.get()

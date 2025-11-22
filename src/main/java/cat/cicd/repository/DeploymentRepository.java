@@ -12,15 +12,15 @@ import java.util.Optional;
 
 @Repository
 public interface DeploymentRepository extends JpaRepository<Deployment, Long> {
-	Optional<Deployment> findFirstByProjectAndStatusOrderByIdDesc(Project project, DeploymentStatus status);
+	Optional<Deployment> findFirstByProjectAndDeployStatusEqualsOrderByIdDesc(Project project, DeploymentStatus deploymentStatus);
 
 	Optional<Deployment> findByGithubRunId(String githubRunId);
 
 	Deployment findTopByProjectOrderByCreatedAtDesc(Project project);
 
-	List<Deployment> findAllByProjectIdOrderByCreatedAtDesc(Long projectId);
+	List<Deployment> findAllByProjectIdAndCiCheckEqualsOrderByCreatedAtDesc(Long projectId, boolean ciCheck);
 
-    List<Deployment> findByProjectAndStatusOrderByCreatedAtDesc(Project project, DeploymentStatus status, Pageable pageable);
+    List<Deployment> findByProjectAndDeployStatusEqualsOrderByCreatedAtDesc(Project project, DeploymentStatus deploymentStatus, Pageable pageable);
 
-    List<Deployment> findAllByStatus(DeploymentStatus status);
+    List<Deployment> findAllByDeployStatus(DeploymentStatus status);
 }

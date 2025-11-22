@@ -70,9 +70,13 @@ public class Deployment {
 	private String taskDefinitionArn;
 
 	@Setter
-	@Enumerated(EnumType.STRING)
+    @Enumerated(EnumType.STRING)
 	@Column(nullable = false)
-	private DeploymentStatus status;
+	private DeploymentStatus deployStatus;
+
+    @Setter
+    @Column
+    private boolean ciCheck;
 
 	@OneToMany(mappedBy = "deployment", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<DeploymentStage> stages = new ArrayList<>();
@@ -89,7 +93,8 @@ public class Deployment {
 		this.githubRunId = githubRunId;
 		this.targetCluster = targetCluster;
 		this.targetService = targetService;
-		this.status = DeploymentStatus.PENDING;
+		this.ciCheck = false;
+        this.deployStatus = DeploymentStatus.PENDING;
 	}
 
 	public void addStage(DeploymentStage stage) {
