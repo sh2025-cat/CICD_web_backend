@@ -40,7 +40,7 @@ public class SseController {
             @PathVariable long deploymentId,
             @PathVariable long jobId) {
 
-		SseEmitter emitter = new SseEmitter(5 * 60 * 1000L);
+		SseEmitter emitter = new SseEmitter(60 * 60 * 1000L);
 
 		githubActionService.streamLogsToEmitter(emitter, deploymentId, jobId);
 

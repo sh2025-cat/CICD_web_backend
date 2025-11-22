@@ -16,7 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Slf4j
 public class SseService {
 
-    private final Map<String, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
+    private final Map<Long, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
     private final ProjectRepository projectRepository;
 
     public SseService(ProjectRepository projectRepository) {
@@ -26,34 +26,31 @@ public class SseService {
     public SseEmitter subscribe(long projectId) {
         SseEmitter emitter = new SseEmitter(60 * 1000L * 60);
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new IllegalArgumentException("Project is not found"));
+        emitters.computeIfAbsent(projectId, k -> new CopyOnWriteArrayList<>()).add(emitter);
 
-        emitters.computeIfAbsent(project.getName(), k -> new CopyOnWriteArrayList<>()).add(emitter);
-
-        emitter.onCompletion(() -> removeEmitter(project.getName(), emitter));
-        emitter.onTimeout(() -> removeEmitter(project.getName(), emitter));
-        emitter.onError((e) -> removeEmitter(project.getName(), emitter));
+        emitter.onCompletion(() -> removeEmitter(projectId, emitter));
+        emitter.onTimeout(() -> removeEmitter(projectId, emitter));
+        emitter.onError((e) -> removeEmitter(projectId, emitter));
 
         try {
             emitter.send(SseEmitter.event().name("connect").data("connected!"));
         } catch (IOException e) {
-            log.error("Failed to send connect event to emitter '{}': {}", project.getName(), e.getMessage());
+            log.error("Failed to send connect event to emitter '{}': {}", projectId, e.getMessage());
             emitter.completeWithError(e);
         }
 
         return emitter;
     }
 
-    private void removeEmitter(String projectName, SseEmitter emitter) {
-        List<SseEmitter> projectEmitters = emitters.get(projectName);
+    private void removeEmitter(long projectId, SseEmitter emitter) {
+        List<SseEmitter> projectEmitters = emitters.get(projectId);
         if (projectEmitters != null) {
             projectEmitters.remove(emitter);
         }
     }
 
-    public void send(String projectName, String eventName, Object data) {
-        List<SseEmitter> projectEmitters = emitters.get(projectName);
+    public void send(long projectId, String eventName, Object data) {
+        List<SseEmitter> projectEmitters = emitters.get(projectId);
 
         if (projectEmitters != null) {
             projectEmitters.forEach(emitter -> {
@@ -62,7 +59,7 @@ public class SseService {
                             .name(eventName)
                             .data(data));
                 } catch (IOException e) {
-                    removeEmitter(projectName, emitter);
+                    removeEmitter(projectId, emitter);
                 }
             });
         }

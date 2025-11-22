@@ -143,7 +143,6 @@ public class GithubActionService {
         }
 
         deploymentRepository.save(deployment);
-        sseService.send(repoName, "deployment_update", stage);
     }
 
     @Transactional
@@ -203,7 +202,6 @@ public class GithubActionService {
             }
 
             Deployment savedDeployment = deploymentRepository.save(deployment);
-            sseService.send(savedDeployment.getProject().getName(), "deployment_complete", savedDeployment);
         }
     }
 
