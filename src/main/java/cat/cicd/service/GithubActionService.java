@@ -304,9 +304,12 @@ public class GithubActionService {
 
         Project project = deployment.getProject();
 
+        String owner = project.getOwner();
+        String name = project.getName();
+
 		executor.execute(() -> {
 			try {
-				URI rawLocation = getLogDownloadUrl(project.getOwner(), project.getName(), jobId);
+				URI rawLocation = getLogDownloadUrl(owner, name, jobId);
 
 				RestClient.create()
 						.get()
