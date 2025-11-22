@@ -73,6 +73,7 @@ public class Deployment {
     @Column
     private boolean ciCheck;
 
+    @Builder.Default
 	@OneToMany(mappedBy = "deployment", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<DeploymentStage> stages = new ArrayList<>();
 
