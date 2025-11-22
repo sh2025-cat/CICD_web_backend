@@ -20,7 +20,7 @@ env:
   AWS_REGION: ap-northeast-2
   ECR_REPOSITORY: cat-backend
   ECS_CLUSTER: cat-cluster
-  ECS_SERVICE: cat-backend-service
+  ECS_SERVICE: cat-backend
   CONTAINER_NAME: cat-backend
 
 jobs:
