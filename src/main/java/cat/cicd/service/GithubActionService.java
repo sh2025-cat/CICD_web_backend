@@ -92,7 +92,7 @@ public class GithubActionService {
                 });
 
         DeploymentStage stage = deployment.getStages().stream()
-                .filter(s -> s.getGithubJobId() != null && s.getGithubJobId().equals(jobId))
+                .filter(s -> s.getName() != null && s.getName().equals(jobName))
                 .findFirst()
                 .orElseGet(() -> {
                     DeploymentStage newStage = DeploymentStage.builder()
