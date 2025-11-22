@@ -1,6 +1,7 @@
 package cat.cicd.scheduler;
 
 import cat.cicd.entity.Deployment;
+import cat.cicd.global.enums.DeploymentStatus;
 import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.service.MonitoringService;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,7 @@ public class DeploymentMonitorScheduler {
 
     @Scheduled(fixedDelay = 10000)
     public void pollDeploymentStatus() {
-        List<Deployment> ongoingDeployments = deploymentRepository.findAllByStatus(Deployment.DeploymentStatus.IN_PROGRESS);
+        List<Deployment> ongoingDeployments = deploymentRepository.findAllByStatus(DeploymentStatus.IN_PROGRESS);
 
         for (Deployment deployment : ongoingDeployments) {
             try {

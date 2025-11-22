@@ -5,6 +5,7 @@ import cat.cicd.entity.Deployment;
 import cat.cicd.entity.DeploymentStage;
 import cat.cicd.entity.Project;
 
+import cat.cicd.global.enums.DeploymentStatus;
 import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.repository.ProjectRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -40,15 +41,25 @@ public class ECSService {
     }
 
     @Transactional
-    public Deployment deployNewVersion(Long projectId, String imageTag) { // deploymentId 대신 projectId를 받음
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new IllegalArgumentException("Project not found"));
+    public Deployment deployNewVersion(long deploymentId, String imageTag) {
+        Deployment deployment = deploymentRepository.findById(deploymentId)
+                .orElseThrow(() -> new IllegalArgumentException("Deployment not found"));
 
-        // 1. 새 배포 객체 생성 (이 시점에 DB에 저장하여 ID 생성)
+        Project project = deployment.getProject();
+
         Deployment newDeployment = Deployment.builder()
                 .project(project)
+                .commitAuthor(deployment.getCommitAuthor())
+                .commitHash(deployment.getCommitHash())
+                .commitMessage(deployment.getCommitMessage())
+                .commitBranch(deployment.getCommitBranch())
+                .stages(deployment.getStages())
+                .lastStep(deployment.getLastStep())
+                .pipelineStatus(deployment.getPipelineStatus())
+                .targetCluster(deployment.getTargetCluster())
+                .targetService(deployment.getTargetService())
                 .imageTag(imageTag)
-                .status(Deployment.DeploymentStatus.PENDING)
+                .status(DeploymentStatus.PENDING)
                 .build();
 
         newDeployment = deploymentRepository.save(newDeployment);
@@ -68,10 +79,6 @@ public class ECSService {
                 b -> b.taskDefinition(currentTaskDefinitionArn)).taskDefinition();
 
         List<ContainerDefinition> existingContainers = currentTaskDefinition.containerDefinitions();
-
-        if (existingContainers.isEmpty()) {
-            throw new RuntimeException("컨테이너가 정의되지 않은 Task Definition입니다.");
-        }
 
         ContainerDefinition mainContainer = existingContainers.getFirst();
 
@@ -120,21 +127,21 @@ public class ECSService {
         log.info("Update service requested for: {}", project.getEcsServiceName());
 
         Optional<Deployment> previousSuccessfulDeployment = deploymentRepository
-                .findFirstByProjectAndStatusOrderByIdDesc(project, Deployment.DeploymentStatus.SUCCESS);
+                .findFirstByProjectAndStatusOrderByIdDesc(project, DeploymentStatus.SUCCESS);
 
         deployment.setTargetCluster(project.getEcsClusterName());
         deployment.setTargetService(project.getEcsServiceName());
         deployment.setTaskDefinitionArn(newTaskDefinitionArn);
-        deployment.setStatus(Deployment.DeploymentStatus.IN_PROGRESS);
+        deployment.setStatus(DeploymentStatus.IN_PROGRESS);
 
         Optional<Deployment> lastSuccess = deploymentRepository
-                .findFirstByProjectAndStatusOrderByIdDesc(project, Deployment.DeploymentStatus.SUCCESS);
+                .findFirstByProjectAndStatusOrderByIdDesc(project, DeploymentStatus.SUCCESS);
         lastSuccess.ifPresent(deployment::setPreviousDeployment);
 
         deployment.setTargetCluster(project.getEcsClusterName());
         deployment.setTargetService(project.getEcsServiceName());
         deployment.setTaskDefinitionArn(newTaskDefinitionArn);
-        deployment.setStatus(Deployment.DeploymentStatus.IN_PROGRESS);
+        deployment.setStatus(DeploymentStatus.IN_PROGRESS);
 
         DeploymentStage deploymentStage = DeploymentStage.builder()
                 .name("deploy")
@@ -156,7 +163,7 @@ public class ECSService {
 
         List<Deployment> recentSuccesses = deploymentRepository.findByProjectAndStatusOrderByCreatedAtDesc(
                 project,
-                Deployment.DeploymentStatus.SUCCESS,
+                DeploymentStatus.SUCCESS,
                 PageRequest.of(0, 2)
         );
 
@@ -166,7 +173,7 @@ public class ECSService {
             throw new RuntimeException("롤백할 수 있는 이전 성공 배포가 없습니다.");
         }
 
-        if (currentDeployment.getStatus() == Deployment.DeploymentStatus.SUCCESS) {
+        if (currentDeployment.getStatus() == DeploymentStatus.SUCCESS) {
             if (recentSuccesses.size() < 2) {
                 throw new RuntimeException("이전 버전의 배포 이력이 없습니다.");
             }
@@ -190,7 +197,7 @@ public class ECSService {
                 .taskDefinitionArn(rollbackTaskDefinitionArn)
                 .targetCluster(project.getEcsClusterName())
                 .targetService(project.getEcsServiceName())
-                .status(Deployment.DeploymentStatus.SUCCESS)
+                .status(DeploymentStatus.SUCCESS)
                 .build();
 
         return deploymentRepository.save(rollbackRecord);

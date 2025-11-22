@@ -3,6 +3,7 @@ package cat.cicd.service;
 import cat.cicd.entity.Deployment;
 import cat.cicd.entity.DeploymentStage;
 import cat.cicd.entity.Project;
+import cat.cicd.global.enums.DeploymentStatus;
 import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.repository.ProjectRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -128,9 +129,9 @@ public class GithubActionService {
         }
 
         if ("failure".equalsIgnoreCase(conclusion)) {
-            deployment.setStatus(Deployment.DeploymentStatus.FAILED);
+            deployment.setStatus(DeploymentStatus.FAILED);
         } else if ("success".equalsIgnoreCase(conclusion) && jobName.toLowerCase().contains("build")) {
-            deployment.setStatus(Deployment.DeploymentStatus.SUCCESS);
+            deployment.setStatus(DeploymentStatus.SUCCESS);
         }
 
         deploymentRepository.save(deployment);
@@ -186,9 +187,9 @@ public class GithubActionService {
             deployment.setCommitBranch(headBranch);
 
             if ("success".equals(conclusion)) {
-                deployment.setStatus(Deployment.DeploymentStatus.SUCCESS);
+                deployment.setStatus(DeploymentStatus.SUCCESS);
             } else {
-                deployment.setStatus(Deployment.DeploymentStatus.FAILED);
+                deployment.setStatus(DeploymentStatus.FAILED);
             }
 
             Deployment savedDeployment = deploymentRepository.save(deployment);

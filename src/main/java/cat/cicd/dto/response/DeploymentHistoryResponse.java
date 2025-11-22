@@ -13,16 +13,21 @@ import java.util.List;
 public class DeploymentHistoryResponse {
 	private Long deploymentId;
 	private String status;
+    private String lastStep;
+    private String pipelineStatus;
 	private CommitInfo commit;
 	private Timings timings;
 	private List<StageInfo> stages;
 
 	public static DeploymentHistoryResponse from(Deployment deployment) {
-		CommitInfo commitInfo = CommitInfo.builder().message(deployment.getCommitMessage()).shortHash(
-						deployment.getCommitHash() != null && deployment.getCommitHash().length() > 7
+		CommitInfo commitInfo = CommitInfo.builder()
+                .message(deployment.getCommitMessage())
+                .shortHash(deployment.getCommitHash() != null && deployment.getCommitHash().length() > 7
 								? deployment.getCommitHash().substring(0, 7)
-								: deployment.getCommitHash()).branch(deployment.getCommitBranch())
-				.authorName(deployment.getCommitAuthor()).build();
+								: deployment.getCommitHash())
+                .branch(deployment.getCommitBranch())
+				.authorName(deployment.getCommitAuthor())
+                .build();
 
 		LocalDateTime startedAt = deployment.getCreatedAt();
 		LocalDateTime completedAt = deployment.getUpdatedAt();
@@ -46,8 +51,15 @@ public class DeploymentHistoryResponse {
 								.build()
 				).toList();
 
-		return DeploymentHistoryResponse.builder().deploymentId(deployment.getId())
-				.status(deployment.getStatus().name()).commit(commitInfo).timings(timings).stages(stages).build();
+		return DeploymentHistoryResponse.builder()
+                .deploymentId(deployment.getId())
+				.status(deployment.getStatus().name())
+                .lastStep(deployment.getLastStep().name())
+                .pipelineStatus(deployment.getPipelineStatus().name())
+                .commit(commitInfo)
+                .timings(timings)
+                .stages(stages)
+                .build();
 	}
 
 	@Getter
@@ -55,10 +67,8 @@ public class DeploymentHistoryResponse {
 	public static class CommitInfo {
 		private String message;
 		private String shortHash;
-		private String commitUrl;
 		private String branch;
 		private String authorName;
-		private String authorAvatar;
 	}
 
 	@Getter

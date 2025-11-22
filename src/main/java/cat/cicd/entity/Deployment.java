@@ -1,5 +1,7 @@
 package cat.cicd.entity;
 
+import cat.cicd.global.enums.DeploymentStatus;
+import cat.cicd.global.enums.Step;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -49,10 +51,11 @@ public class Deployment {
 	private String imageTag;
     @Setter
     @Column
-    private String lastStep;
+    private Step lastStep;
     @Setter
     @Column
-    private String pipelineStatus;
+    @Builder.Default
+    private DeploymentStatus pipelineStatus = DeploymentStatus.PENDING;
 
     @Setter
 	@Column(nullable = false)
@@ -90,11 +93,8 @@ public class Deployment {
 	}
 
 	public void addStage(DeploymentStage stage) {
+        if(this.stages == null) this.stages = new ArrayList<>();
 		this.stages.add(stage);
 		stage.setDeployment(this);
-	}
-
-	public enum DeploymentStatus {
-		PENDING, IN_PROGRESS, SUCCESS, FAILED
 	}
 }

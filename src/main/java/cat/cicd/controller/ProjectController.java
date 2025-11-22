@@ -1,5 +1,6 @@
 package cat.cicd.controller;
 
+import cat.cicd.dto.request.NextStepRequest;
 import cat.cicd.dto.request.ProjectRequest;
 import cat.cicd.dto.response.DeploymentDetailResponse;
 import cat.cicd.dto.response.DeploymentHistoryResponse;
@@ -7,6 +8,7 @@ import cat.cicd.dto.response.ProjectResponse;
 import cat.cicd.dto.response.RepoDeployStatusResponse;
 import cat.cicd.entity.Project;
 import cat.cicd.global.common.CommonResponse;
+import cat.cicd.global.enums.Step;
 import cat.cicd.service.ECSService;
 import cat.cicd.service.ProjectService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -68,5 +70,15 @@ public class ProjectController {
     ) {
         DeploymentDetailResponse detail = projectService.getDeploymentDetail(deploymentId);
         return ResponseEntity.ok(CommonResponse.of(detail));
+    }
+
+    @Operation(summary = "배포 별 마지막 스탭 업데이트 API", description = "배포 별 마지막 스탭을 어디까지 진행했는지 추적하기 위한 API")
+    @PostMapping("/repos/{deploymentId}/next")
+    public ResponseEntity<CommonResponse<Void>> postNextStep(
+            @PathVariable long deploymentId,
+            @RequestBody NextStepRequest request
+    ) {
+        projectService.postNextStep(deploymentId, request);
+        return ResponseEntity.ok().build();
     }
 }

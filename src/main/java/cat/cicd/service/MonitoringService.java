@@ -4,6 +4,7 @@ import cat.cicd.entity.Deployment;
 import cat.cicd.entity.DeploymentStage;
 import cat.cicd.entity.Project;
 import cat.cicd.entity.ProjectMetric;
+import cat.cicd.global.enums.DeploymentStatus;
 import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.repository.MetricRepository;
 import cat.cicd.repository.ProjectRepository;
@@ -17,9 +18,9 @@ import software.amazon.awssdk.services.ecs.EcsClient;
 import software.amazon.awssdk.services.ecs.model.DescribeServicesResponse;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -30,8 +31,10 @@ public class MonitoringService {
     private final CloudWatchClient cloudWatchClient;
     private final ProjectRepository projectRepository;
     private final MetricRepository metricRepository;
+    private final SseService sseService;
 
-    public MonitoringService(DeploymentRepository deploymentRepository, ProjectRepository projectRepository, MetricRepository metricRepository) {
+    public MonitoringService(DeploymentRepository deploymentRepository, ProjectRepository projectRepository, MetricRepository metricRepository, SseService sseService) {
+        this.sseService = sseService;
         this.ecsClient = EcsClient.create();
         this.cloudWatchClient = CloudWatchClient.create();
         this.deploymentRepository = deploymentRepository;
@@ -120,7 +123,7 @@ public class MonitoringService {
         Deployment deployment = deploymentRepository.findById(deploymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Deployment not found"));
 
-        if (deployment.getStatus() != Deployment.DeploymentStatus.IN_PROGRESS) return;
+        if (deployment.getStatus() != DeploymentStatus.IN_PROGRESS) return;
 
 //        if (deployment.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(20))) {
 //            log.error("Deployment {} timed out.", deploymentId);
@@ -141,9 +144,9 @@ public class MonitoringService {
 
         software.amazon.awssdk.services.ecs.model.Service service = response.services().getFirst();
 
-        boolean isStable = service.runningCount() == service.desiredCount()
+        boolean isStable = Objects.equals(service.runningCount(), service.desiredCount())
                 && service.deployments().size() == 1
-                && "PRIMARY".equals(service.deployments().get(0).status());
+                && "PRIMARY".equals(service.deployments().getFirst().status());
 
         if (isStable) {
             log.info("Deployment {} successfully completed.", deploymentId);
@@ -155,22 +158,26 @@ public class MonitoringService {
     }
 
     private void completeDeployment(Deployment deployment) {
-        deployment.setStatus(Deployment.DeploymentStatus.SUCCESS);
+        deployment.setPipelineStatus(DeploymentStatus.SUCCESS);
         deployment.getStages().stream()
                 .filter(stage -> "deploy".equalsIgnoreCase(stage.getName())
                         && stage.getStatus() == DeploymentStage.StageStatus.IN_PROGRESS)
                 .findFirst()
                 .ifPresent(DeploymentStage::complete);
         deploymentRepository.save(deployment);
+
+        sseService.send(deployment.getProject().getName(), "deployment_complete", deployment);
     }
 
     private void failDeployment(Deployment deployment, String reason) {
-        deployment.setStatus(Deployment.DeploymentStatus.FAILED);
+        deployment.setPipelineStatus(DeploymentStatus.FAILED);
         deployment.getStages().stream()
                 .filter(stage -> "deploy".equalsIgnoreCase(stage.getName())
                         && stage.getStatus() == DeploymentStage.StageStatus.IN_PROGRESS)
                 .findFirst()
                 .ifPresent(DeploymentStage::fail);
         deploymentRepository.save(deployment);
+
+        sseService.send(deployment.getProject().getName(), "deployment_complete", deployment);
     }
 }
