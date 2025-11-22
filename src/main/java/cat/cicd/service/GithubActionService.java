@@ -4,6 +4,7 @@ import cat.cicd.entity.Deployment;
 import cat.cicd.entity.DeploymentStage;
 import cat.cicd.entity.Project;
 import cat.cicd.global.enums.DeploymentStatus;
+import cat.cicd.global.enums.Step;
 import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.repository.ProjectRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -187,6 +188,8 @@ public class GithubActionService {
             deployment.setCommitBranch(headBranch);
 
             if ("success".equals(conclusion)) {
+                deployment.setPipelineStatus(DeploymentStatus.PENDING);
+                deployment.setLastStep(Step.TEST);
                 deployment.setStatus(DeploymentStatus.SUCCESS);
             } else {
                 deployment.setStatus(DeploymentStatus.FAILED);
