@@ -39,7 +39,9 @@ public class ProjectService {
 								project.getName(),
 								latestDeployment.getImageTag(),
                                 latestDeployment.getPipelineStatus(),
-								latestDeployment.getCommitHash().substring(0, 7),
+								latestDeployment.getCommitHash() != null
+                                        ? latestDeployment.getCommitHash().substring(0, 7)
+                                        : null,
 								latestDeployment.getCommitMessage(),
 								latestDeployment.getCreatedAt());
 					} else {
