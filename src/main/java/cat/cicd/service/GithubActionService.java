@@ -67,6 +67,7 @@ public class GithubActionService {
         String jobName = (String) job.get("name");
         String status = (String) job.get("status");
         String conclusion = (String) job.get("conclusion");
+        LocalDateTime startedAt = (LocalDateTime) job.get("started_at");
 
         Project project = projectRepository.findByOwnerAndName(ownerName, repoName)
                 .orElseGet(() -> projectRepository.save(
@@ -99,6 +100,7 @@ public class GithubActionService {
                             .name(jobName)
                             .githubJobId(jobId)
                             .status(ProgressStatus.PENDING)
+                            .startedAt(startedAt)
                             .build();
                     deployment.addStage(newStage);
                     return newStage;
