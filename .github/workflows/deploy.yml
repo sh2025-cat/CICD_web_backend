@@ -1,4 +1,4 @@
-name: Cat-Backend Build 
+name: Cat-Backend Build & Deploy
 
 on:
   push:
@@ -19,17 +19,21 @@ permissions:
 env:
   AWS_REGION: ap-northeast-2
   ECR_REPOSITORY: cat-backend
+  ECS_CLUSTER: cat-cluster
+  ECS_SERVICE: cat-backend-service
+  CONTAINER_NAME: cat-backend
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: production 
+    environment: production
     outputs:
       image_tag: ${{ steps.build-image.outputs.image_tag }}
+      image_uri: ${{ steps.build-image.outputs.image_uri }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -41,7 +45,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # Docker 이미지 빌드 및 태그 지정 
       - name: Build, tag, and push image to ECR
         id: build-image
         env:
@@ -62,3 +65,51 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image_uri=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get current task definition
+        id: get-task-def
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_SERVICE }} \
+            --query 'taskDefinition' \
+            --output json > task-definition.json
+
+          # 불필요한 필드 제거
+          jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' \
+            task-definition.json > clean-task-definition.json
+
+      - name: Update task definition with new image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: clean-task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ needs.build.outputs.image_uri }}
+
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Deployment summary
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "📦 Image: ${{ needs.build.outputs.image_uri }}"
+          echo "🎯 Cluster: ${{ env.ECS_CLUSTER }}"
+          echo "🚀 Service: ${{ env.ECS_SERVICE }}"
