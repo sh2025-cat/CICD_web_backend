@@ -1,5 +1,7 @@
 package cat.cicd.service;
 
+import cat.cicd.entity.Project;
+import cat.cicd.repository.ProjectRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -15,20 +17,28 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class SseService {
 
     private final Map<String, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
+    private final ProjectRepository projectRepository;
 
-    public SseEmitter subscribe(String projectName) {
+    public SseService(ProjectRepository projectRepository) {
+        this.projectRepository = projectRepository;
+    }
+
+    public SseEmitter subscribe(long projectId) {
         SseEmitter emitter = new SseEmitter(60 * 1000L * 60);
 
-        emitters.computeIfAbsent(projectName, k -> new CopyOnWriteArrayList<>()).add(emitter);
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("Project is not found"));
 
-        emitter.onCompletion(() -> removeEmitter(projectName, emitter));
-        emitter.onTimeout(() -> removeEmitter(projectName, emitter));
-        emitter.onError((e) -> removeEmitter(projectName, emitter));
+        emitters.computeIfAbsent(project.getName(), k -> new CopyOnWriteArrayList<>()).add(emitter);
+
+        emitter.onCompletion(() -> removeEmitter(project.getName(), emitter));
+        emitter.onTimeout(() -> removeEmitter(project.getName(), emitter));
+        emitter.onError((e) -> removeEmitter(project.getName(), emitter));
 
         try {
             emitter.send(SseEmitter.event().name("connect").data("connected!"));
         } catch (IOException e) {
-            log.error("Failed to send connect event to emitter '{}': {}", projectName, e.getMessage());
+            log.error("Failed to send connect event to emitter '{}': {}", project.getName(), e.getMessage());
             emitter.completeWithError(e);
         }
 

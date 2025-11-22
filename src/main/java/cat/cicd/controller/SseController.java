@@ -23,9 +23,9 @@ public class SseController {
 	private final GithubActionService githubActionService;
 
     @Operation(summary = "SSE 연결 API", description = "프론트엔드에서 SSE를 연결할 API입니다.")
-    @GetMapping(value = "/subscribe/{projectName}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter subscribe(@PathVariable String projectName) {
-        return sseService.subscribe(projectName);
+    @GetMapping(value = "/subscribe/{projectId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribe(@PathVariable long projectId) {
+        return sseService.subscribe(projectId);
     }
 
 	@Operation(summary = "Git Action 로그 실시간 스트리밍", description = "GitHub Action Job의 실행 로그를 한 줄씩 실시간으로 반환합니다. (EventSource 연결 필요)")

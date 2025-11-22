@@ -166,7 +166,7 @@ public class MonitoringService {
                 .ifPresent(DeploymentStage::complete);
         deploymentRepository.save(deployment);
 
-        sseService.send(deployment.getProject().getName(), "deployment_complete", deployment);
+        sseService.send(deployment.getProject().getName(), "deployment_complete", ProgressStatus.SUCCESS);
     }
 
     private void failDeployment(Deployment deployment, String reason) {
@@ -178,6 +178,6 @@ public class MonitoringService {
                 .ifPresent(DeploymentStage::fail);
         deploymentRepository.save(deployment);
 
-        sseService.send(deployment.getProject().getName(), "deployment_complete", deployment);
+        sseService.send(deployment.getProject().getName(), "deployment_complete", ProgressStatus.FAILED);
     }
 }
