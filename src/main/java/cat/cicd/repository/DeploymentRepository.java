@@ -25,7 +25,6 @@ public interface DeploymentRepository extends JpaRepository<Deployment, Long> {
     @EntityGraph(attributePaths = {"stages"})
 	List<Deployment> findAllByProjectIdAndCiCheckEqualsOrderByCreatedAtDesc(Long projectId, boolean ciCheck);
 
-    @EntityGraph(attributePaths = {"stages"})
     List<Deployment> findByProjectAndPipelineStatusEqualsOrderByCreatedAtDesc(Project project, ProgressStatus progressStatus, Pageable pageable);
 
     @EntityGraph(attributePaths = {"stages"})
