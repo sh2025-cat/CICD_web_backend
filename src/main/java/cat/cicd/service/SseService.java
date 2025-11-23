@@ -17,11 +17,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class SseService {
 
     private final Map<Long, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
-    private final ProjectRepository projectRepository;
-
-    public SseService(ProjectRepository projectRepository) {
-        this.projectRepository = projectRepository;
-    }
 
     public SseEmitter subscribe(long projectId) {
         SseEmitter emitter = new SseEmitter(60 * 1000L * 60);

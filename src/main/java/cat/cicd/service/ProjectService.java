@@ -107,7 +107,7 @@ public class ProjectService {
         List<MetricResponse> metrics = metricRepository.findTop5ByProjectOrderByRecordedAtDesc(deployment.getProject()).stream()
                 .map(metric -> new MetricResponse(
                         metric.getCpuUsage(),
-                        metric.getMemoryUsage(),
+                        metric.getMemoryUsage() / 100,
                         metric.getRecordedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                 ))
                 .collect(Collectors.toList());

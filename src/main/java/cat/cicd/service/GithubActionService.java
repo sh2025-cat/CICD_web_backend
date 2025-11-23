@@ -179,12 +179,14 @@ public class GithubActionService {
 
             Map<String, Object> headCommit = (Map<String, Object>) run.get("head_commit");
             String headBranch = (String) run.get("head_branch");
+            String commitMessage = (String) headCommit.get("message");
+            String firstLine = commitMessage.lines().findFirst().orElse("");
 
             if (headCommit != null) {
                 String commitHash = (String) headCommit.get("id");
                 deployment.setCommitHash(commitHash);
                 deployment.setImageTag(commitHash.substring(0, 7));
-                deployment.setCommitMessage((String) headCommit.get("message"));
+                deployment.setCommitMessage(firstLine);
 
                 Map<String, Object> author = (Map<String, Object>) headCommit.get("author");
                 if (author != null) {

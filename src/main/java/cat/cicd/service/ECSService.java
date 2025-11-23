@@ -117,9 +117,9 @@ public class ECSService {
         DeploymentStage deploymentStage = DeploymentStage.builder()
                 .name("deploy")
                 .status(ProgressStatus.IN_PROGRESS)
+                .githubJobId(0L)
                 .build();
         deployment.addStage(deploymentStage);
-
 
         return deploymentRepository.save(deployment);
     }

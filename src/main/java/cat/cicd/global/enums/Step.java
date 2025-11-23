@@ -3,7 +3,12 @@ package cat.cicd.global.enums;
 import lombok.Getter;
 
 public enum Step {
-    TEST("test"), SAST("sast"), BUILD("build"), INFRA("infra"), DEPLOY("deploy"), MONITORING("monitoring");
+    TEST("test"),
+    SAST("sast"),
+    BUILD("build"),
+    INFRA("infra"),
+    DEPLOY("deploy"),
+    MONITORING("monitoring");
 
     @Getter
     private final String value;
