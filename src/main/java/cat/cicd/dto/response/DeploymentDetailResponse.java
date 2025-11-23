@@ -2,6 +2,7 @@ package cat.cicd.dto.response;
 
 import cat.cicd.entity.Deployment;
 import cat.cicd.entity.DeploymentStage;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -75,7 +76,9 @@ public class DeploymentDetailResponse {
 	@Getter
 	@Builder
 	public static class TimeInfo {
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
 		private LocalDateTime createdAt;
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
 		private LocalDateTime finishedAt;
 		private String duration;
 	}
@@ -106,6 +109,7 @@ public class DeploymentDetailResponse {
 		private String status;
 		private String duration;
 		private Long githubJobId;
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
 		private LocalDateTime startedAt;
 	}
 }

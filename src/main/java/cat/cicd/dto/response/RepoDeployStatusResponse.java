@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Getter
 @Builder
@@ -17,7 +18,7 @@ public class RepoDeployStatusResponse {
 	private String commitHash;
 	private String commitMsg;
 
-	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss.SSS")
+	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
 	private LocalDateTime deployedAt;
 
 	public static RepoDeployStatusResponse of(Long id, String name, String tag, ProgressStatus status, String commitHash, String commitMsg, LocalDateTime deployedAt) {
