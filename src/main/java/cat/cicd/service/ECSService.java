@@ -49,10 +49,12 @@ public class ECSService {
 
         Deployment newDeployment = Deployment.builder()
                 .project(project)
+                .ciCheck(true)
                 .commitAuthor(deployment.getCommitAuthor())
                 .commitHash(deployment.getCommitHash())
                 .commitMessage(deployment.getCommitMessage())
                 .commitBranch(deployment.getCommitBranch())
+                .githubRunId(deployment.getGithubRunId())
                 .stages(new ArrayList<>())
                 .lastStep(deployment.getLastStep())
                 .pipelineStatus(ProgressStatus.IN_PROGRESS)
@@ -66,7 +68,10 @@ public class ECSService {
             for (DeploymentStage oldStage : deployment.getStages()) {
                 DeploymentStage newStage = DeploymentStage.builder()
                         .name(oldStage.getName())
+                        .githubJobId(oldStage.getGithubJobId())
                         .status(oldStage.getStatus())
+                        .startedAt(oldStage.getStartedAt())
+                        .completedAt(oldStage.getCompletedAt())
                         .build();
 
                 newDeployment.addStage(newStage);

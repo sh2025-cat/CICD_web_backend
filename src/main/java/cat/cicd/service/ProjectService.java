@@ -89,6 +89,13 @@ public class ProjectService {
                 .orElseThrow(() -> new IllegalArgumentException("Deployment not found with id: " + deploymentId));
 
         deployment.setLastStep(Step.from(request.step()));
+
+        deployment.getStages().forEach(stage -> {
+            if(stage.getName().equals(request.step()) && stage.getStatus().equals(ProgressStatus.FAILED)) {
+                deployment.setPipelineStatus(ProgressStatus.FAILED);
+            }
+
+        });
         deploymentRepository.save(deployment);
     }
 

@@ -144,9 +144,7 @@ public class MonitoringService {
 
         software.amazon.awssdk.services.ecs.model.Service service = response.services().getFirst();
 
-        boolean isStable = Objects.equals(service.runningCount(), service.desiredCount())
-                && service.deployments().size() == 1
-                && "PRIMARY".equals(service.deployments().getFirst().status());
+        boolean isStable = Objects.equals(service.runningCount(), service.desiredCount());
 
         if (isStable) {
             log.info("Deployment {} successfully completed.", deploymentId);
@@ -159,6 +157,7 @@ public class MonitoringService {
 
     private void completeDeployment(Deployment deployment) {
         deployment.setDeployStatus(ProgressStatus.SUCCESS);
+        deployment.setPipelineStatus(ProgressStatus.SUCCESS);
         deployment.getStages().stream()
                 .filter(stage -> "deploy".equalsIgnoreCase(stage.getName())
                         && stage.getStatus() == ProgressStatus.IN_PROGRESS)
@@ -171,6 +170,7 @@ public class MonitoringService {
 
     private void failDeployment(Deployment deployment, String reason) {
         deployment.setDeployStatus(ProgressStatus.FAILED);
+        deployment.setPipelineStatus(ProgressStatus.FAILED);
         deployment.getStages().stream()
                 .filter(stage -> "deploy".equalsIgnoreCase(stage.getName())
                         && stage.getStatus() == ProgressStatus.IN_PROGRESS)

@@ -198,7 +198,7 @@ public class GithubActionService {
                 deployment.setLastStep(Step.TEST);
                 deployment.setCiCheck(true);
             } else {
-                deployment.setCiCheck(false);
+                deployment.setCiCheck(true);
             }
 
             Deployment savedDeployment = deploymentRepository.save(deployment);
