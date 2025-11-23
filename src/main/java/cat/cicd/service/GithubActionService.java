@@ -196,13 +196,11 @@ public class GithubActionService {
                 }
             }
             deployment.setCommitBranch(headBranch);
+            deployment.setLastStep(Step.TEST);
+            deployment.setCiCheck(true);
 
             if ("success".equals(conclusion)) {
                 deployment.setPipelineStatus(ProgressStatus.PENDING);
-                deployment.setLastStep(Step.TEST);
-                deployment.setCiCheck(true);
-            } else {
-                deployment.setCiCheck(true);
             }
 
             Deployment savedDeployment = deploymentRepository.save(deployment);

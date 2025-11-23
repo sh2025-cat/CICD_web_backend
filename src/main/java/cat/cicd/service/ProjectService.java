@@ -80,9 +80,16 @@ public class ProjectService {
 		Deployment deployment = deploymentRepository.findById(deploymentId)
 				.orElseThrow(() -> new IllegalArgumentException("Deployment not found with id: " + deploymentId));
 
-        deployment.setPipelineStatus(ProgressStatus.IN_PROGRESS);
-        if(deployment.getDeployStatus() == ProgressStatus.SUCCESS) {
-            deployment.setPipelineStatus(ProgressStatus.SUCCESS);
+        if (deployment.getDeployStatus() == ProgressStatus.PENDING) {
+
+            boolean hasFailedStage = deployment.getStages().stream()
+                    .anyMatch(stage -> stage.getStatus() == ProgressStatus.FAILED);
+
+            if (hasFailedStage) {
+                deployment.setPipelineStatus(ProgressStatus.FAILED);
+            } else {
+                deployment.setPipelineStatus(ProgressStatus.IN_PROGRESS);
+            }
         }
 
 		return cat.cicd.dto.response.DeploymentDetailResponse.from(deployment);
