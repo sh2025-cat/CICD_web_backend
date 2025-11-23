@@ -81,6 +81,10 @@ public class ProjectService {
 				.orElseThrow(() -> new IllegalArgumentException("Deployment not found with id: " + deploymentId));
 
         deployment.setPipelineStatus(ProgressStatus.IN_PROGRESS);
+        if(deployment.getDeployStatus() == ProgressStatus.SUCCESS) {
+            deployment.setPipelineStatus(ProgressStatus.SUCCESS);
+        }
+
 		return cat.cicd.dto.response.DeploymentDetailResponse.from(deployment);
 	}
 
