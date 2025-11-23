@@ -9,7 +9,6 @@ import cat.cicd.global.enums.ProgressStatus;
 import cat.cicd.repository.DeploymentRepository;
 import cat.cicd.repository.ProjectRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.services.ecs.EcsClient;
@@ -46,41 +45,9 @@ public class ECSService {
 
         Project project = deployment.getProject();
 
-        Deployment newDeployment = Deployment.builder()
-                .project(project)
-                .ciCheck(true)
-                .commitAuthor(deployment.getCommitAuthor())
-                .commitHash(deployment.getCommitHash())
-                .commitMessage(deployment.getCommitMessage())
-                .commitBranch(deployment.getCommitBranch())
-                .githubRunId(deployment.getGithubRunId())
-                .stages(new ArrayList<>())
-                .lastStep(deployment.getLastStep())
-                .pipelineStatus(ProgressStatus.IN_PROGRESS)
-                .deployStatus(ProgressStatus.IN_PROGRESS)
-                .targetCluster(deployment.getTargetCluster())
-                .targetService(deployment.getTargetService())
-                .imageTag(imageTag)
-                .previousDeployment(deployment)
-                .build();
+        deployment.setDeployStatus(ProgressStatus.IN_PROGRESS);
 
-        if (deployment.getStages() != null) {
-            for (DeploymentStage oldStage : deployment.getStages()) {
-                DeploymentStage newStage = DeploymentStage.builder()
-                        .name(oldStage.getName())
-                        .githubJobId(oldStage.getGithubJobId())
-                        .status(oldStage.getStatus())
-                        .startedAt(oldStage.getStartedAt())
-                        .completedAt(oldStage.getCompletedAt())
-                        .build();
-
-                newDeployment.addStage(newStage);
-            }
-        }
-
-        newDeployment = deploymentRepository.save(newDeployment);
-
-        return processDeployment(newDeployment, project, imageTag);
+        return processDeployment(deployment, project, imageTag);
     }
 
     @Transactional
@@ -142,11 +109,9 @@ public class ECSService {
                 .build());
         log.info("Update service requested for: {}", project.getEcsServiceName());
 
-//        Optional<Deployment> lastSuccess = deploymentRepository.findFirstByProjectAndPipelineStatusEqualsOrderByIdDesc(project, ProgressStatus.SUCCESS);
-//        lastSuccess.ifPresent(deployment::setPreviousDeployment);
-
         deployment.setTargetCluster(project.getEcsClusterName());
         deployment.setTargetService(project.getEcsServiceName());
+        deployment.setBeforeTaskDefinitionArn(deployment.getTaskDefinitionArn());
         deployment.setTaskDefinitionArn(newTaskDefinitionArn);
 
         DeploymentStage deploymentStage = DeploymentStage.builder()
@@ -165,28 +130,11 @@ public class ECSService {
 
         Project project = currentDeployment.getProject();
 
-        List<Deployment> recentSuccesses = deploymentRepository.findByProjectAndPipelineStatusEqualsOrderByCreatedAtDesc(
-                project,
-                ProgressStatus.SUCCESS,
-                PageRequest.of(0, 2)
-        );
-
-        Deployment stableDeployment;
-
-        if (recentSuccesses.isEmpty()) {
-            throw new RuntimeException("롤백할 수 있는 이전 성공 배포가 없습니다.");
+        if(currentDeployment.getBeforeTaskDefinitionArn() == null) {
+            throw new RuntimeException("No previous version found for deployment: " + currentDeploymentId);
         }
 
-        if (currentDeployment.getPipelineStatus() == ProgressStatus.SUCCESS) {
-            if (recentSuccesses.size() < 2) {
-                throw new RuntimeException("이전 버전의 배포 이력이 없습니다.");
-            }
-            stableDeployment = recentSuccesses.get(1);
-        } else {
-            stableDeployment = recentSuccesses.getFirst();
-        }
-
-        String rollbackTaskDefinitionArn = stableDeployment.getTaskDefinitionArn();
+        String rollbackTaskDefinitionArn = currentDeployment.getBeforeTaskDefinitionArn();
         log.info("Rolling back to Task Definition: {}", rollbackTaskDefinitionArn);
 
         ecsClient.updateService(UpdateServiceRequest.builder()
@@ -201,7 +149,7 @@ public class ECSService {
                 .taskDefinitionArn(rollbackTaskDefinitionArn)
                 .targetCluster(project.getEcsClusterName())
                 .targetService(project.getEcsServiceName())
-                .pipelineStatus(stableDeployment.getPipelineStatus())
+                .pipelineStatus(ProgressStatus.IN_PROGRESS)
                 .build();
 
         return deploymentRepository.save(rollbackRecord);

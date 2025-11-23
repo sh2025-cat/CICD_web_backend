@@ -30,11 +30,6 @@ public class Deployment {
 	private String githubRunId;
 
 	@Setter
-	@OneToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "previous_deployment_id")
-	private Deployment previousDeployment;
-
-	@Setter
 	@Column
 	private String commitHash;
 	@Setter
@@ -72,6 +67,10 @@ public class Deployment {
 	@Setter
 	@Column
 	private String taskDefinitionArn;
+
+    @Setter
+    @Column
+    private String beforeTaskDefinitionArn;
 
     @Setter
     @Column

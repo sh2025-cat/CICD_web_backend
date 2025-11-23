@@ -84,6 +84,7 @@ public class ProjectService {
 		return cat.cicd.dto.response.DeploymentDetailResponse.from(deployment);
 	}
 
+    @Transactional
     public void postNextStep(long deploymentId, NextStepRequest request) {
         Deployment deployment = deploymentRepository.findById(deploymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Deployment not found with id: " + deploymentId));
