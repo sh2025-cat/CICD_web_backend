@@ -42,7 +42,7 @@ public class ProjectService {
 		return projectRepository.findAll().stream()
 				.map(project -> {
 					Deployment latestDeployment = deploymentRepository
-							.findTopByProjectOrderByCreatedAtDesc(project);
+							.findFirstByProjectAndPipelineStatusEqualsOrderByIdDesc(project, ProgressStatus.SUCCESS);
 					if (latestDeployment != null) {
 						return RepoDeployStatusResponse.of(
 								project.getId(),

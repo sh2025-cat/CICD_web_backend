@@ -14,7 +14,7 @@ import java.util.Optional;
 @Repository
 public interface DeploymentRepository extends JpaRepository<Deployment, Long> {
     @EntityGraph(attributePaths = {"stages"})
-	Optional<Deployment> findFirstByProjectAndPipelineStatusEqualsOrderByIdDesc(Project project, ProgressStatus progressStatus);
+	Deployment findFirstByProjectAndPipelineStatusEqualsOrderByIdDesc(Project project, ProgressStatus progressStatus);
 
     @EntityGraph(attributePaths = {"stages"})
 	Optional<Deployment> findByGithubRunId(String githubRunId);
