@@ -53,7 +53,7 @@ public class ECSService {
                 .commitHash(deployment.getCommitHash())
                 .commitMessage(deployment.getCommitMessage())
                 .commitBranch(deployment.getCommitBranch())
-                .stages(deployment.getStages())
+                .stages(new ArrayList<>())
                 .lastStep(deployment.getLastStep())
                 .pipelineStatus(ProgressStatus.IN_PROGRESS)
                 .deployStatus(ProgressStatus.IN_PROGRESS)
@@ -61,6 +61,17 @@ public class ECSService {
                 .targetService(deployment.getTargetService())
                 .imageTag(imageTag)
                 .build();
+
+        if (deployment.getStages() != null) {
+            for (DeploymentStage oldStage : deployment.getStages()) {
+                DeploymentStage newStage = DeploymentStage.builder()
+                        .name(oldStage.getName())
+                        .status(oldStage.getStatus())
+                        .build();
+
+                newDeployment.addStage(newStage);
+            }
+        }
 
         newDeployment = deploymentRepository.save(newDeployment);
 
@@ -136,7 +147,6 @@ public class ECSService {
         DeploymentStage deploymentStage = DeploymentStage.builder()
                 .name("deploy")
                 .status(ProgressStatus.IN_PROGRESS)
-                .deployment(deployment)
                 .build();
         deployment.addStage(deploymentStage);
 
