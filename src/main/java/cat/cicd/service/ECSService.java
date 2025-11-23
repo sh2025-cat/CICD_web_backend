@@ -21,7 +21,6 @@ import software.amazon.awssdk.services.resourcegroupstaggingapi.model.TagFilter;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -62,6 +61,7 @@ public class ECSService {
                 .targetCluster(deployment.getTargetCluster())
                 .targetService(deployment.getTargetService())
                 .imageTag(imageTag)
+                .previousDeployment(deployment)
                 .build();
 
         if (deployment.getStages() != null) {
@@ -142,8 +142,8 @@ public class ECSService {
                 .build());
         log.info("Update service requested for: {}", project.getEcsServiceName());
 
-        Optional<Deployment> lastSuccess = deploymentRepository.findFirstByProjectAndPipelineStatusEqualsOrderByIdDesc(project, ProgressStatus.SUCCESS);
-        lastSuccess.ifPresent(deployment::setPreviousDeployment);
+//        Optional<Deployment> lastSuccess = deploymentRepository.findFirstByProjectAndPipelineStatusEqualsOrderByIdDesc(project, ProgressStatus.SUCCESS);
+//        lastSuccess.ifPresent(deployment::setPreviousDeployment);
 
         deployment.setTargetCluster(project.getEcsClusterName());
         deployment.setTargetService(project.getEcsServiceName());

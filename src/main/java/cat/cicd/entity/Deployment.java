@@ -26,7 +26,7 @@ public class Deployment {
 	@JoinColumn(name = "project_id", nullable = false)
 	private Project project;
 
-	@Column(unique = true)
+	@Column
 	private String githubRunId;
 
 	@Setter
