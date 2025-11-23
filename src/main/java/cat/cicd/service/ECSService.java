@@ -136,6 +136,7 @@ public class ECSService {
         DeploymentStage deploymentStage = DeploymentStage.builder()
                 .name("deploy")
                 .status(ProgressStatus.IN_PROGRESS)
+                .deployment(deployment)
                 .build();
         deployment.addStage(deploymentStage);
 
