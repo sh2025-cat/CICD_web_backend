@@ -111,7 +111,7 @@ public class ECSService {
 
         deployment.setTargetCluster(project.getEcsClusterName());
         deployment.setTargetService(project.getEcsServiceName());
-        deployment.setBeforeTaskDefinitionArn(deployment.getTaskDefinitionArn());
+        deployment.setBeforeTaskDefinitionArn(currentTaskDefinitionArn);
         deployment.setTaskDefinitionArn(newTaskDefinitionArn);
 
         DeploymentStage deploymentStage = DeploymentStage.builder()
@@ -119,6 +119,7 @@ public class ECSService {
                 .status(ProgressStatus.IN_PROGRESS)
                 .build();
         deployment.addStage(deploymentStage);
+
 
         return deploymentRepository.save(deployment);
     }
