@@ -11,6 +11,7 @@ RUN ./gradlew bootJar && \
 
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
 ENV SPRING_PROFILES_ACTIVE=prod
+ENV TZ=Asia/Seoul
 
 EXPOSE 8080
 
